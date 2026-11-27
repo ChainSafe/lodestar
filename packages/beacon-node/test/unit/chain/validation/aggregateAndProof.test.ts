@@ -3,7 +3,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
-import {computeSigningRoot} from "@lodestar/state-transition";
+import {computeSigningRoot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
@@ -156,8 +156,19 @@ describe("chain / validation / aggregateAndProof", () => {
   it("INVALID_SIGNATURE - selection proof sig", async () => {
     const bitIndex = 126;
     const {chain, signedAggregateAndProof} = getValidData({bitIndex});
-    // Swap the selectionProof signature with the overall sig of the object
-    signedAggregateAndProof.message.selectionProof = signedAggregateAndProof.signature;
+    // Corrupt the proof while preserving the aggregator modulo check, so validation reaches the signature check.
+    const invalidProof = signedAggregateAndProof.message.selectionProof.slice();
+    const committeeLength = getState().epochCtx.getBeaconCommittee(
+      signedAggregateAndProof.message.aggregate.data.slot,
+      1
+    ).length;
+    const originalFirstByte = invalidProof[0];
+    for (let value = 0; value <= 0xff; value++) {
+      if (value === originalFirstByte) continue;
+      invalidProof[0] = value;
+      if (isAggregatorFromCommitteeLength(committeeLength, invalidProof)) break;
+    }
+    signedAggregateAndProof.message.selectionProof = invalidProof;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
@@ -198,6 +209,20 @@ describe("chain / validation / aggregateAndProof", () => {
 
     expect(config.getForkTypes(slot).AggregateAndProof).toBe(ssz.gloas.AggregateAndProof);
     expect(getAggregateAndProofSigningRoot(config, 1, signedAggregateAndProof)).toEqual(expectedRoot);
+  });
+
+  it("NON_ZERO_ATTESTATION_DATA_INDEX - pre-gloas slot on gloas topic", async () => {
+    const config = createBeaconConfig({...defaultConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 4}, ZERO_HASH);
+    const chain = {config} as unknown as IBeaconChain;
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = 3 * SLOTS_PER_EPOCH;
+    signedAggregateAndProof.message.aggregate.data.index = 1;
+    signedAggregateAndProof.message.aggregate.committeeBits.set(0, true);
+
+    await expectRejectedWithLodestarError(
+      validateApiAggregateAndProof(ForkName.gloas, chain, signedAggregateAndProof),
+      AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX
+    );
   });
 
   /** Alias to reduce code duplication */

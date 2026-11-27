@@ -56,14 +56,7 @@ describe("validate indexed attestation", () => {
       signature: EMPTY_SIGNATURE,
     };
     expect(
-      isValidIndexedAttestation(
-        state.config,
-        state.epochCtx.pubkeyCache,
-        state.slot,
-        state.validators.length,
-        indexedAttestation,
-        false
-      )
+      isValidIndexedAttestation(state.config, state.slot, state.validators.length, indexedAttestation, false)
     ).toBe(expectedValue);
   });
 });

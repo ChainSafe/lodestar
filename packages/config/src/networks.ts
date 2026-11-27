@@ -4,30 +4,33 @@ import {ephemeryChainConfig} from "./chainConfig/networks/ephemery.js";
 import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
 import {hoodiChainConfig} from "./chainConfig/networks/hoodi.js";
 import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
+import {platabergetChainConfig} from "./chainConfig/networks/plataberget.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
 export {
-  mainnetChainConfig,
-  gnosisChainConfig,
-  sepoliaChainConfig,
-  hoodiChainConfig,
   chiadoChainConfig,
   ephemeryChainConfig,
+  gnosisChainConfig,
+  hoodiChainConfig,
+  mainnetChainConfig,
+  platabergetChainConfig,
+  sepoliaChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "hoodi" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "hoodi" | "plataberget" | "chiado" | "ephemery";
 export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
   sepolia: sepoliaChainConfig,
   hoodi: hoodiChainConfig,
+  plataberget: platabergetChainConfig,
   chiado: chiadoChainConfig,
   ephemery: ephemeryChainConfig,
 };
 
 export type GenesisData = {
   genesisTime: number;
-  genesisValidatorsRoot: string;
+  genesisValidatorsRoot: string | null;
 };
 
 export const genesisData: Record<NetworkName, GenesisData> = {
@@ -47,12 +50,16 @@ export const genesisData: Record<NetworkName, GenesisData> = {
     genesisTime: 1742213400,
     genesisValidatorsRoot: "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f",
   },
+  plataberget: {
+    genesisTime: 1786622400,
+    genesisValidatorsRoot: "0xbb4a1a9e3f7f4e10edcd734e4acc3b5ffd4f830efe0af2748fa458cfee5d2658",
+  },
   chiado: {
     genesisTime: 1665396300,
     genesisValidatorsRoot: "0x9d642dac73058fbf39c0ae41ab1e34e4d889043cb199851ded7095bc99eb4c1e",
   },
   ephemery: {
     genesisTime: ephemeryChainConfig.MIN_GENESIS_TIME + ephemeryChainConfig.GENESIS_DELAY,
-    genesisValidatorsRoot: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    genesisValidatorsRoot: null,
   },
 };

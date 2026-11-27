@@ -16,8 +16,8 @@ export {
   type IFastConfirmationRule,
   type IFastConfirmationStore,
   getFastConfirmationMetrics,
-} from "./forkChoice/fastConfirmation/fastConfirmationRule.ts";
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, getCommitteeFraction} from "./forkChoice/forkChoice.js";
+} from "./forkChoice/fastConfirmation/fastConfirmationRule.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
@@ -26,6 +26,7 @@ export {
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
+  type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";
 export {
@@ -40,9 +41,18 @@ export type {
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
+export {
+  ExecutionStatus,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  PayloadStatus,
+  getPtcVerdict,
+  isGloasBlock,
+} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

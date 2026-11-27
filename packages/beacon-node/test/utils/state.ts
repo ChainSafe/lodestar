@@ -1,8 +1,9 @@
-import {SecretKey} from "@chainsafe/blst";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -13,7 +14,6 @@ import {
   CachedBeaconStateElectra,
   DataAvailabilityStatus,
   createCachedBeaconState,
-  createPubkeyCache,
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
@@ -97,7 +97,9 @@ export function generateState(
 
   if (forkSeq >= ForkSeq.electra) {
     const stateElectra = state as electra.BeaconState;
-    stateElectra.depositRequestsStartIndex = 2023n;
+    if (forkSeq < ForkSeq.heze) {
+      stateElectra.depositRequestsStartIndex = 2023n;
+    }
     stateElectra.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
   }
 
@@ -110,11 +112,10 @@ export function generateState(
  */
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -123,11 +124,10 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
  */
 export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoch = 0): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.altair, altairForkEpoch);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -136,11 +136,10 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
  */
 export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeaconStateBellatrix {
   const config = getConfig(ForkName.bellatrix);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -149,10 +148,10 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
  */
 export function generateCachedElectraState(opts?: TestBeaconState, electraForkEpoch = 0): CachedBeaconStateElectra {
   const config = getConfig(ForkName.electra, electraForkEpoch);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 export const zeroProtoBlock: ProtoBlock = {
@@ -172,6 +171,9 @@ export const zeroProtoBlock: ProtoBlock = {
   unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
   timeliness: false,
+  importedTimely: false,
+  ptcTimeliness: false,
+  proposerIndex: 0,
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,

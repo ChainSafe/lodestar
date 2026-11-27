@@ -10,7 +10,13 @@ proposer_config:
     builder:
       gas_limit: "35000000"
       selection: "builderalways"
-      boost_factor: "18446744073709551616"
+      boost_factor: "18446744073709551615"
+      builders:
+        - url: "https://builder-a.example.com"
+          min_bid: "1000"
+        - url: "https://builder-a.example.com"
+          auth_data: "0x0123"
+          builder_boost_factor: "200"
 default_config:
   graffiti: "default graffiti"
   strict_fee_recipient_check: "true"

@@ -30,6 +30,7 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
+            "run/beacon-management/historical-fork-support",
           ],
         },
         {
@@ -40,6 +41,13 @@ const sidebars: SidebarsConfig = {
             "run/validator-management/validator-cli",
             "run/validator-management/external-signer",
             "run/validator-management/proposer-config",
+          ],
+        },
+        {
+          type: "category",
+          label: "Builder Client",
+          items: [
+            "run/builder-management/builder-cli",
           ],
         },
         {

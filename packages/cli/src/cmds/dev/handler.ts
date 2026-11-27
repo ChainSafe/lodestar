@@ -1,10 +1,10 @@
 import fs from "node:fs";
-import {rimraf} from "rimraf";
+import {rm} from "node:fs/promises";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
-import {mkdir, onGracefulShutdown} from "../../util/index.js";
+import {mkdir} from "../../util/index.js";
 import {beaconHandler} from "../beacon/handler.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {validatorHandler} from "../validator/handler.js";
@@ -31,23 +31,26 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
   // Flag --reset cleans up the custom dirs on dev stop
-  const beaconDbDir = getBeaconPaths(args, network).dbDir;
+  const {dbDir: beaconDbDir, pubkeysFile} = getBeaconPaths(args, network);
   const validatorsDbDir = getValidatorPaths(args, network).validatorsDbDir;
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
   if (args.genesisTime === undefined) {
-    await rimraf(beaconDbDir);
-    await rimraf(validatorsDbDir);
+    await rm(beaconDbDir, {recursive: true, force: true});
+    await rm(validatorsDbDir, {recursive: true, force: true});
+    // Validators deposited in the previous run do not exist on the new chain
+    await rm(pubkeysFile, {recursive: true, force: true});
   }
 
   mkdir(beaconDbDir);
   mkdir(validatorsDbDir);
 
   if (args.reset) {
-    onGracefulShutdown(async () => {
-      await rimraf(beaconDbDir);
-      await rimraf(validatorsDbDir);
+    // Runs once the beacon node and validator client are closed
+    process.once("exit", () => {
+      fs.rmSync(beaconDbDir, {recursive: true, force: true});
+      fs.rmSync(validatorsDbDir, {recursive: true, force: true});
     });
   }
 
@@ -81,6 +84,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     // - metrics
     // - monitoring
     // - keymanager server
-    await validatorHandler(args);
+    // The beacon handler exits the process once the beacon node is closed
+    await validatorHandler(args, {exitOnShutdown: false});
   }
 }

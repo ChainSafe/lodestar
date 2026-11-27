@@ -9,20 +9,9 @@ export enum ProfileThread {
 }
 
 /**
- * The time to take a Bun profile.
- * If we increase this time it'll potentiall cause the app to crash.
- * If we decrease this time, profile recorded will be fragmented and hard to analyze.
- */
-const BUN_PROFILE_MS = 3 * 1000;
-
-export async function profileThread(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
-  return globalThis.Bun ? profileBun(thread, durationMs) : profileNodeJS(thread, durationMs, dirpath);
-}
-
-/**
  * Take `durationMs` profile of the current thread and return the persisted file path.
  */
-async function profileNodeJS(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
+export async function profileThread(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
   const inspector = await import("node:inspector");
 
   // due to some typing issues, not able to use promisify here
@@ -52,25 +41,6 @@ async function profileNodeJS(thread: ProfileThread, durationMs: number, dirpath:
   const filePath = path.join(dirpath, `${thread}_thread_${new Date().toISOString()}.cpuprofile`);
   fs.writeFileSync(filePath, profile);
   return filePath;
-}
-
-/**
- * Unlike NodeJS, Bun console.profile() api flush data to the inspector,
- * so this api returns ms taken of this profile instead of file path.
- */
-async function profileBun(thread: ProfileThread, durationMs: number): Promise<string> {
-  const start = Date.now();
-  let now = Date.now();
-  while (now - start < durationMs) {
-    // biome-ignore lint/suspicious/noConsole: need to use console api to profile in Bun
-    console.profile(String(now));
-    await sleep(BUN_PROFILE_MS);
-    // biome-ignore lint/suspicious/noConsole: need to use console api to profile in Bun
-    console.profileEnd(String(now));
-    now = Date.now();
-  }
-
-  return `Successfully take Bun ${thread} thread profile in ${now - start}ms. Check your inspector to see the profile.`;
 }
 
 /**

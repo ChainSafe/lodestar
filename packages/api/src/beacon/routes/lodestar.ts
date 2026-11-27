@@ -11,10 +11,12 @@ import {
   Slot,
   ValidatorIndex,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -120,7 +122,7 @@ const HistoricalSummariesResponseType = new ContainerType(
   {
     slot: ssz.Slot,
     historicalSummaries: ssz.capella.HistoricalSummaries,
-    proof: ArrayOf(ssz.Bytes8),
+    proof: ArrayOf(ssz.Bytes32),
   },
   {jsonCase: "eth2"}
 );
@@ -136,24 +138,25 @@ export type CustodyInfo = {
   custodyColumns: number[];
 };
 
-export type FastConfirmationInfo = {
-  confirmed: {
-    rootHex: RootHex | null;
-    slot: Slot | null;
-  };
-  head: {
-    rootHex: RootHex;
-    slot: Slot;
-  };
-  justifiedCheckpoint: {
-    rootHex: RootHex;
-    epoch: Epoch;
-  };
-  finalizedCheckpoint: {
-    rootHex: RootHex;
-    epoch: Epoch;
-  };
-};
+const BlockInfoType = new ContainerType({root: ssz.Root, slot: ssz.Slot});
+
+export const FastConfirmationInfoType = new ContainerType(
+  {
+    confirmed: BlockInfoType,
+    head: BlockInfoType,
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
+    previousEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    currentEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    previousEpochGreatestUnrealizedCheckpoint: ssz.phase0.Checkpoint,
+    previousSlotHead: ssz.Root,
+    currentSlotHead: ssz.Root,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type FastConfirmationInfo = ValueOf<typeof FastConfirmationInfoType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -657,7 +660,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/lodestar/fast_confirmation",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: JsonOnlyResponseCodec,
+      resp: {
+        data: FastConfirmationInfoType,
+        meta: EmptyMetaCodec,
+      },
     },
     getAttesterSlashingsFromBlocks: {
       url: "/eth/v1/lodestar/blocks/attester_slashings",
@@ -667,13 +673,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).toJson(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).fromJson(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },
@@ -681,13 +687,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).serialize(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).deserialize(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },

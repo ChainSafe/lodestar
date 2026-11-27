@@ -1,8 +1,16 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  EpochShuffling,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  getAttestingIndices,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -13,6 +21,7 @@ import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {GLOAS_POLAR_BEAR_BANNER} from "./utils/polarBearBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
@@ -74,10 +83,6 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
-  // in forky condition, make sure to populate ShufflingCache with regened state
-  // otherwise it may fail to get indexed attestations from shuffling cache later
-  this.shufflingCache.processState(preState0);
-
   if (!preState0.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -107,12 +112,24 @@ export async function verifyBlocksInEpoch(
 
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+    const attestationShufflingsByBlock: EpochShuffling[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+      attestationShufflingsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
-        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+        // we should have the shuffling inside ShufflingCache most of the time
+        return (
+          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+          preState0.getShufflingAtEpoch(attEpoch)
+        );
       });
+      // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
+      // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation, j) => ({
+        attestingIndices: getAttestingIndices(attestationShufflingsByBlock[i][j], fork, attestation),
+        data: attestation.data,
+        signature: attestation.signature,
+      }));
     }
 
     // Pick the data-availability source by fork:
@@ -121,17 +138,21 @@ export async function verifyBlocksInEpoch(
     const daAvailabilityPromise: Promise<{
       blockDAStatuses: DataAvailabilityStatus[];
       payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
-      availableTime: number;
+      availableTimeMs: number;
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
-            // Validate DA for ALL payloads in the Map, not just those paired with blockInputs.
+            // Range sync creates a PayloadEnvelopeInput for every Gloas block, but an entry without
+            // an envelope represents a valid EMPTY slot and has no payload DA to verify.
             // A checkpoint-sync batch may include a payload for a slot whose block was filtered
             // out of relevantBlocks (e.g., the anchor at the finalized slot); that payload still
             // needs DA validation so it can be imported in processBlocks.
             const payloadInputsForDa: PayloadEnvelopeInput[] =
-              payloadEnvelopes !== null ? Array.from(payloadEnvelopes.values()) : [];
-            const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+              payloadEnvelopes !== null
+                ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
+                : [];
+            const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
+              this.config,
               payloadInputsForDa,
               abortController.signal
             );
@@ -144,40 +165,55 @@ export async function verifyBlocksInEpoch(
               // post-gloas, DataAvailabilityStatus is NotRequired for forkChoice.onBlock() ProtoBlock
               blockDAStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
               payloadDAStatuses,
-              availableTime,
+              availableTimeMs,
             };
           })()
         : (async () => {
-            const {dataAvailabilityStatuses, availableTime} = await verifyBlocksDataAvailability(
+            const {dataAvailabilityStatuses, availableTimeMs} = await verifyBlocksDataAvailability(
               blockInputs,
               abortController.signal
             );
             return {
               blockDAStatuses: dataAvailabilityStatuses,
               payloadDAStatuses: new Map<Slot, DataAvailabilityStatus>(),
-              availableTime,
+              availableTimeMs,
             };
           })();
 
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
-      {blockDAStatuses, payloadDAStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {blockDAStatuses, payloadDAStatuses, availableTimeMs},
       {verifySignaturesTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
+      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
+      // so we hand the BLS job to the worker pool before the main thread
+      // is busy with the state transition.
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        attestationShufflingsByBlock,
+        opts
+      ),
+
       // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
         // hack availability for state transition eval as availability is separately determined
         blocks.map(() => DataAvailabilityStatus.Available),
+        this.serializedCache,
         this.logger,
         this.metrics,
         this.validatorMonitor,
@@ -185,23 +221,28 @@ export async function verifyBlocksInEpoch(
         opts
       ),
 
-      // All signatures at once
-      opts.skipVerifyBlockSignatures !== true
-        ? verifyBlocksSignatures(
-            this.config,
-            this.bls,
-            this.logger,
-            this.metrics,
-            preState0,
-            blocks,
-            indexedAttestationsByBlock,
-            opts
-          )
-        : Promise.resolve({verifySignaturesTime: Date.now()}),
-
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
+    }
+
+    for (const blockInput of blockInputs) {
+      const block = blockInput.getBlock();
+      const {slot, proposerIndex} = block.message;
+      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex, signedBlockHeader);
+      // Only produce a slashing while importing the block. A block that is verified before it is published
+      // must not be treated as equivocation evidence since it may never be seen by the network
+      if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
+      }
+    }
 
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
@@ -228,6 +269,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
             this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            break;
+
+          case ForkName.gloas:
+            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:
@@ -262,15 +308,18 @@ export async function verifyBlocksInEpoch(
         const recvTofullyVerifedTime = fullyVerifiedTime / 1000 - opts.seenTimestampSec;
         this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
 
-        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
+        const verifiedToBlobsAvailabiltyTime = Math.max(availableTimeMs - fullyVerifiedTime, 0) / 1000;
+        const receivedToBlobsAvailabilityTime = Math.max(availableTimeMs / 1000 - opts.seenTimestampSec, 0);
         const block = blockInputs[0].getBlock();
         const numBlobs = getBlobKzgCommitments(blockInputs[0].forkName, block as deneb.SignedBeaconBlock).length;
 
         this.metrics?.gossipBlock.verifiedToBlobsAvailabiltyTime.observe({numBlobs}, verifiedToBlobsAvailabiltyTime);
+        this.metrics?.gossipBlock.receivedToBlobsAvailabilityTime.observe({numBlobs}, receivedToBlobsAvailabilityTime);
         this.logger.verbose("Verified blockInput fully with blobs availability", {
           slot: block.message.slot,
           recvTofullyVerifedTime,
           verifiedToBlobsAvailabiltyTime,
+          receivedToBlobsAvailabilityTime,
           type: blockInputs[0].type,
           numBlobs,
         });

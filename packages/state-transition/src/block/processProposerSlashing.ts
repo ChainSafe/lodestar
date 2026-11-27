@@ -1,10 +1,9 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/types/phase0";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {slashValidator} from "./slashValidator.js";
@@ -22,47 +21,13 @@ export function processProposerSlashing(
   verifySignatures = true
 ): void {
   const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
-  assertValidProposerSlashing(
-    state.config,
-    state.epochCtx.pubkeyCache,
-    state.slot,
-    proposerSlashing,
-    proposer,
-    verifySignatures
-  );
-
-  if (fork >= ForkSeq.gloas) {
-    // Remove the BuilderPendingPayment corresponding to this proposal if it is still in the
-    // 2-epoch window. Only clear it when the slashed validator is the proposer associated with
-    // the payment; otherwise an unrelated same-slot equivocation could grief an honest proposer's
-    // payment.
-    const slot = Number(proposerSlashing.signedHeader1.message.slot);
-    const proposalEpoch = computeEpochAtSlot(slot);
-    const currentEpoch = state.epochCtx.epoch;
-    const previousEpoch = currentEpoch - 1;
-
-    const paymentIndex =
-      proposalEpoch === currentEpoch
-        ? SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH)
-        : proposalEpoch === previousEpoch
-          ? slot % SLOTS_PER_EPOCH
-          : undefined;
-
-    if (paymentIndex !== undefined) {
-      const builderPendingPayments = (state as CachedBeaconStateGloas).builderPendingPayments;
-      const payment = builderPendingPayments.get(paymentIndex);
-      if (payment.proposerIndex === proposerSlashing.signedHeader1.message.proposerIndex) {
-        builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
-      }
-    }
-  }
+  assertValidProposerSlashing(state.config, state.slot, proposerSlashing, proposer, verifySignatures);
 
   slashValidator(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
 
 export function assertValidProposerSlashing(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing,
   proposer: Validator,
@@ -99,7 +64,7 @@ export function assertValidProposerSlashing(
   if (verifySignatures) {
     const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
-      if (!verifySignatureSet(signatureSets[i], pubkeyCache)) {
+      if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }

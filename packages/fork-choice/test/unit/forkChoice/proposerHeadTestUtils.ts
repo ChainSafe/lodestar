@@ -5,6 +5,7 @@ import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceMetrics,
   IForkChoiceStore,
   PayloadStatus,
   ProtoArray,
@@ -25,6 +26,17 @@ export const gloasConfig = createChainForkConfig({
   GLOAS_FORK_EPOCH: 0,
 });
 
+export const hezeConfig = createChainForkConfig({
+  ALTAIR_FORK_EPOCH: 0,
+  BELLATRIX_FORK_EPOCH: 0,
+  CAPELLA_FORK_EPOCH: 0,
+  DENEB_FORK_EPOCH: 0,
+  ELECTRA_FORK_EPOCH: 0,
+  FULU_FORK_EPOCH: 0,
+  GLOAS_FORK_EPOCH: 0,
+  HEZE_FORK_EPOCH: 0,
+});
+
 export const genesisSlot = 0;
 export const genesisEpoch = 0;
 export const parentSlot = genesisSlot + 1;
@@ -39,7 +51,12 @@ export function getPayloadBlockHash(slot: Slot): RootHex {
  * isGloasBlock() keys off parentBlockHash being non-null, so `isGloas` decides whether the block
  * carries the three payload variants (PENDING/EMPTY/FULL) or just FULL.
  */
-export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean): ProtoBlock {
+export function toProtoBlock(
+  slot: Slot,
+  parentRoot: RootHex,
+  isGloas: boolean,
+  overrides: Partial<ProtoBlock> = {}
+): ProtoBlock {
   return {
     slot,
     blockRoot: getBlockRoot(slot),
@@ -57,6 +74,9 @@ export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean):
     unrealizedFinalizedRoot: getBlockRoot(genesisSlot),
 
     timeliness: false,
+    importedTimely: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     executionPayloadBlockHash: getPayloadBlockHash(slot),
     executionPayloadNumber: slot,
@@ -66,7 +86,11 @@ export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean):
 
     parentBlockHash: isGloas ? getPayloadBlockHash(slot - 1) : null,
     payloadStatus: PayloadStatus.FULL,
-  };
+
+    ...overrides,
+    // ProtoBlock is a union over the execution fields; spreading Partial<ProtoBlock> loses the
+    // narrowing even though every base object here is the post-merge shape
+  } as ProtoBlock;
 }
 
 /** A state whose only slot committee is every validator, so equivocators always count */
@@ -127,13 +151,15 @@ export function setup({
   parentVotes = 0,
   proposerBoost = null,
   store = makeStore(),
+  metrics = null,
 }: {
   isGloas: boolean;
   config: ChainForkConfig;
   headVotes?: number;
   parentVotes?: number;
-  proposerBoost?: {root: RootHex; score: number} | null;
+  proposerBoost?: {root: RootHex; score: bigint} | null;
   store?: IForkChoiceStore;
+  metrics?: ForkChoiceMetrics | null;
 }): {forkChoice: ForkChoice; headRoot: RootHex; parentRoot: RootHex} {
   const genesisRoot = getBlockRoot(genesisSlot);
   const protoArray = ProtoArray.initialize(toProtoBlock(genesisSlot, genesisRoot, false), genesisSlot);
@@ -142,7 +168,7 @@ export function setup({
 
   // The ForkChoice constructor calls updateHead(), which re-runs applyScoreChanges with whatever boost
   // it holds (none). Build it first, then apply the scores, so the boost under test survives.
-  const forkChoice = new ForkChoice(config, store, protoArray, VALIDATOR_COUNT, null);
+  const forkChoice = new ForkChoice(config, store, protoArray, VALIDATOR_COUNT, metrics);
 
   const headRoot = getBlockRoot(headSlot);
   const parentRoot = getBlockRoot(parentSlot);

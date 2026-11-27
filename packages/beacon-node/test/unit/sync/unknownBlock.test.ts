@@ -1,36 +1,71 @@
 import EventEmitter from "node:events";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
-import {createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
-import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
-import {notNullish, sleep, toRootHex} from "@lodestar/utils";
-import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {
+  computeStartSlotAtEpoch,
+  getBlockProposerSignatureSet,
+  interopSecretKey,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {SignedBeaconBlock, fulu, gloas, phase0, ssz} from "@lodestar/types";
+import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
+import {
+  BlockInputNoData,
+  BlockInputPreData,
+  isBlockInputColumns,
+} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {BlsSingleThreadVerifier} from "../../../src/chain/bls/singleThread.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
+import {
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+} from "../../../src/chain/errors/dataColumnSidecarError.js";
+import {
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../src/chain/errors/executionPayloadEnvelope.js";
+import {GossipAction} from "../../../src/chain/errors/gossipValidation.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGloasBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
-import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
+import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {BlockInputSyncCacheItem, PendingBlockInputStatus} from "../../../src/sync/types.js";
-import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
+import {
+  BlockInputSyncCacheItem,
+  PayloadSyncCacheItem,
+  PendingBlockInputStatus,
+  PendingPayloadInputStatus,
+  PendingPayloadRootHex,
+} from "../../../src/sync/types.js";
+import {BlockInputSync, PAYLOAD_POLL_INTERVAL_MS, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
+import {DownloadByRootErrorCode} from "../../../src/sync/utils/downloadByRoot.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
+import {SerializedCache} from "../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {config as blocksAndDataConfig, generateBlockWithColumnSidecars, slots} from "../../utils/blocksAndData.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
+
+for (let i = 0; i < 2; i++) {
+  pubkeyCache.append(i, interopSecretKey(i).toPublicKey().toBytes());
+}
 
 vi.mock("../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
@@ -79,7 +114,8 @@ function buildPayloadFixture({
     forkName: ForkName.gloas,
     sampledColumns,
     custodyColumns: sampledColumns,
-    timeCreatedSec: Date.now() / 1000,
+    seenTimestampSec: Date.now() / 1000,
+    source: PayloadEnvelopeInputSource.byRange,
     daOutOfRange: false,
   });
 
@@ -228,7 +264,7 @@ function buildIncompleteGloasBlockInput({
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
   const logger = testLogger();
-  const slotSec = 0.3;
+  const slotSec = 1;
   const config = createBeaconConfig(
     {
       ...minimalConfig,
@@ -277,8 +313,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       id: "downloaded parent is before finalized slot",
       event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
-      // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
-      // Test verifies blocks are cleaned up from pendingBlocks instead
       reportPeer: true,
     },
     {
@@ -394,10 +428,16 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       const forkChoiceKnownPayloadHashes = new Map([[blockRootHex0, toRootHex(blockHash0)]]);
       const forkChoice: Pick<
         IForkChoice,
-        "getBlockHexAndBlockHash" | "getFinalizedBlock" | "hasBlock" | "hasBlockHex" | "hasPayloadHexUnsafe"
+        | "getBlockHexAndBlockHash"
+        | "getBlockHexDefaultStatus"
+        | "getFinalizedBlock"
+        | "hasBlock"
+        | "hasBlockHex"
+        | "hasPayloadHexUnsafe"
       > = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toRootHex(root)),
         hasBlockHex: (rootHex) => forkChoiceKnownRoots.has(rootHex),
+        getBlockHexDefaultStatus: (rootHex) => (forkChoiceKnownRoots.has(rootHex) ? ({slot: 0} as ProtoBlock) : null),
         hasPayloadHexUnsafe: (rootHex) => forkChoiceKnownPayloadHashes.has(rootHex),
         getBlockHexAndBlockHash: (rootHex, blockHashHex) =>
           forkChoiceKnownPayloadHashes.get(rootHex) === blockHashHex ? ({slot: 0} as ProtoBlock) : null,
@@ -423,6 +463,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         clock: new ClockStopped(0),
         forkChoice: forkChoice as IForkChoice,
         genesisTime: 0,
+        pubkeyCache,
         custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
         processBlock: async (blockInput, opts) => {
           const block = blockInput.getBlock();
@@ -472,11 +513,14 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
               source,
             }),
           prune: () => {},
+          remove: () => {},
+          isVerifiedProposerSignature: () => true,
         } as unknown as SeenBlockInput,
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
-          prune: vi.fn(),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
 
@@ -531,7 +575,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         await sendBeaconBlocksByRootPromise;
         await sleep(200);
         // Downloaded block is before finalized slot, so blocks should be cleaned up
-        // (peer reporting is currently disabled in removeAndDownScoreAllDescendants)
         expect(processBlockSpy).not.toHaveBeenCalled();
       } else if (maxPendingBlocks !== undefined) {
         // With maxPendingBlocks=1 and unknownParent event, the scheduler can re-queue one pruned
@@ -543,11 +586,12 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       } else {
         // Wait for all blocks to be in ForkChoice store
         await blockCProcessed;
+        // the payload poll loop also schedules timers, so assert on the proposer boost delay only
+        const proposerBoostWindowMs = config.getAttestationDueMs(config.getForkName(blockC.message.slot));
         if (seenBlock) {
-          const proposerBoostWindowMs = config.getAttestationDueMs(config.getForkName(blockC.message.slot));
           expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), proposerBoostWindowMs);
         } else {
-          expect(setTimeoutSpy).not.toHaveBeenCalled();
+          expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), proposerBoostWindowMs);
         }
 
         // After completing the sync, all blocks should be in the ForkChoice
@@ -573,6 +617,7 @@ describe("UnknownBlockSync", () => {
   beforeEach(() => {
     network = {
       events: new NetworkEventBus(),
+      getConnectedPeers: () => [],
     } as Partial<INetwork> as INetwork;
     chain = getMockedBeaconChain();
   });
@@ -685,10 +730,14 @@ describe("UnknownBlockSync", () => {
           clock: new ClockStopped(0),
           forkChoice: {
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
           genesisTime: 0,
+          pubkeyCache,
           custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
           processBlock,
           seenBlockInputCache: {
@@ -699,7 +748,7 @@ describe("UnknownBlockSync", () => {
               source,
               peerIdStr,
             }: {
-              block: SignedBeaconBlock;
+              block: SignedBeaconBlock<ForkName.phase0>;
               blockRootHex: string;
               seenTimestampSec: number;
               source: BlockInputSource;
@@ -715,12 +764,14 @@ describe("UnknownBlockSync", () => {
                 peerIdStr,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(undefined),
-            prune: vi.fn(),
+            getOrReload: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         } as unknown as IBeaconChain;
 
@@ -761,6 +812,1180 @@ describe("UnknownBlockSync", () => {
     }
   });
 
+  describe("download retention", () => {
+    function setupBlockSyncTest({
+      processBlock,
+      sendBeaconBlocksByRoot,
+      peer,
+      config = minimalConfig,
+    }: {
+      processBlock: ReturnType<typeof vi.fn>;
+      sendBeaconBlocksByRoot: ReturnType<typeof vi.fn>;
+      peer: PeerIdStr;
+      config?: ChainForkConfig;
+    }): {
+      service: BlockInputSync;
+      reportPeer: ReturnType<typeof vi.fn>;
+      chainEmitter: ChainEventEmitter;
+      chain: IBeaconChain;
+    } {
+      const networkEvents = new NetworkEventBus();
+      const reportPeer = vi.fn();
+
+      const networkForTest = {
+        events: networkEvents,
+        getConnectedPeers: () => [peer],
+        getConnectedPeerSyncMeta: () => ({
+          peerId: peer,
+          client: "retention-test-client",
+          custodyColumns: [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot,
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainEmitter = new ChainEventEmitter();
+      const chainForTest = {
+        emitter: chainEmitter,
+        clock: new ClockStopped(0),
+        forkChoice: {
+          hasBlockHex: vi.fn().mockImplementation((root: string) => root === toRootHex(Buffer.alloc(32, 0xaa))),
+          getBlockHexDefaultStatus: vi
+            .fn()
+            .mockImplementation((root: string) =>
+              root === toRootHex(Buffer.alloc(32, 0xaa)) ? ({slot: 0} as ProtoBlock) : null
+            ),
+          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+        } as unknown as IForkChoice,
+        genesisTime: 0,
+        custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+        processBlock,
+        seenBlockInputCache: {
+          getByBlock: ({
+            block,
+            blockRootHex,
+            seenTimestampSec,
+            source,
+            peerIdStr,
+          }: {
+            block: SignedBeaconBlock<ForkName.phase0>;
+            blockRootHex: string;
+            seenTimestampSec: number;
+            source: BlockInputSource;
+            peerIdStr?: PeerIdStr;
+          }) =>
+            BlockInputPreData.createFromBlock({
+              block,
+              blockRootHex,
+              forkName: ForkName.phase0,
+              daOutOfRange: false,
+              seenTimestampSec,
+              source,
+              peerIdStr,
+            }),
+          prune: vi.fn(),
+          remove: vi.fn(),
+        } as unknown as SeenBlockInput,
+        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          prune: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(config, networkForTest, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      networkEvents.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: {} as never,
+        custodyColumns: [],
+        clientAgent: "retention-test-client",
+      });
+
+      return {service: svc, reportPeer, chainEmitter, chain: chainForTest};
+    }
+
+    it("retains the pending entry when the download fails and retries it after a backoff", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xaa);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+      const processBlock = vi.fn();
+      const sendBeaconBlocksByRoot = vi.fn().mockRejectedValue(new Error("no block"));
+      const {
+        service: svc,
+        reportPeer,
+        chainEmitter,
+      } = setupBlockSyncTest({processBlock, sendBeaconBlocksByRoot, peer: peerA});
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      try {
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+          rootHex: blockRootHex,
+          peer: peerA,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        // could-not-fetch is not evidence the block is bad (#10018): entry retained for retry
+        const retained = pendingBlocks.get(blockRootHex);
+        expect(retained?.status).toBe(PendingBlockInputStatus.pending);
+        expect(reportPeer).not.toHaveBeenCalled();
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        // any new unknown root triggers a search, which must not retry the entry before its backoff expires
+        (svc as unknown as {triggerUnknownBlockSearch: () => void}).triggerUnknownBlockSearch();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2);
+        expect(pendingBlocks.get(blockRootHex)?.status).toBe(PendingBlockInputStatus.pending);
+      } finally {
+        svc.close();
+        vi.useRealTimers();
+      }
+    });
+
+    it("backs off a download that fails after replacing the entry with a partial result", async () => {
+      const peerA = await getRandPeerIdStr();
+      const rootHex = toRootHex(Buffer.alloc(32, 0xcc));
+
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn(),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+      // Like a Fulu download that got the block and some columns, the entry is replaced before the fetch throws
+      const fetchBlockInput = vi
+        .spyOn(svc as unknown as {fetchBlockInput: () => Promise<never>}, "fetchBlockInput")
+        .mockImplementation(async () => {
+          pendingBlocks.set(rootHex, {
+            status: PendingBlockInputStatus.pending,
+            rootHex,
+            timeAddedSec: 0,
+            peerIdStrings: new Set([peerA]),
+          });
+          throw Error("missing columns");
+        });
+
+      try {
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchBlockInput).toHaveBeenCalledOnce();
+
+        (svc as unknown as {triggerUnknownBlockSearch: () => void}).triggerUnknownBlockSearch();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchBlockInput).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(2);
+
+        // the backoff doubles even though every failure leaves a fresh entry behind
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(3);
+      } finally {
+        svc.close();
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not keep unknown roots over a new one because a payload search shares them", async () => {
+      const peerA = await getRandPeerIdStr();
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // A gossip attestation with index 1 searches its unknown root as a block and as a payload before validation
+      for (let i = 0; i < 100; i++) {
+        const rootHex = toRootHex(Buffer.alloc(32, 0).fill(i + 1, 0, 4));
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+        chainEmitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+      }
+      const newRootHex = toRootHex(Buffer.alloc(32, 0xdd));
+      chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+        rootHex: newRootHex,
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+
+      expect(pendingBlocks.size).toBe(100);
+      expect(pendingBlocks.has(newRootHex)).toBe(true);
+
+      svc.close();
+    });
+
+    it("does not evict a new unknown root for pending blocks and the parents they wait on", async () => {
+      const peerA = await getRandPeerIdStr();
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // A block downloaded by root is only checked against the root, a peer can make us hold blocks it crafted
+      for (let i = 0; i < 100; i++) {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = i + 1;
+        block.message.parentRoot = Buffer.alloc(32, 0).fill(i + 1, 0, 4);
+        const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {
+          blockInput: BlockInputPreData.createFromBlock({
+            block,
+            blockRootHex,
+            forkName: ForkName.phase0,
+            daOutOfRange: false,
+            seenTimestampSec: 0,
+            source: BlockInputSource.byRoot,
+            peerIdStr: peerA,
+          }),
+          peer: peerA,
+          source: BlockInputSource.byRoot,
+        });
+      }
+      const newRootHex = toRootHex(Buffer.alloc(32, 0xdd));
+      chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+        rootHex: newRootHex,
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+
+      expect(pendingBlocks.has(newRootHex)).toBe(true);
+
+      svc.close();
+    });
+
+    it("evicts unknown roots nothing waits on before a pending block and its parent", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xbb);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const parentRootHex = toRootHex(block.message.parentRoot);
+
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      chainEmitter.emit(ChainEvent.blockUnknownParent, {
+        blockInput: BlockInputPreData.createFromBlock({
+          block,
+          blockRootHex,
+          forkName: ForkName.phase0,
+          daOutOfRange: false,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+          peerIdStr: peerA,
+        }),
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+      // Any gossip message with an unknown root adds one of these before validation
+      for (let i = 0; i < 200; i++) {
+        const rootHex = toRootHex(Buffer.alloc(32, 0).fill(i + 1, 0, 4));
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+      }
+
+      expect(pendingBlocks.size).toBe(100);
+      expect(pendingBlocks.has(blockRootHex)).toBe(true);
+      expect(pendingBlocks.has(parentRootHex)).toBe(true);
+
+      svc.close();
+    });
+
+    function unknownParentBlock(slot: number, parentByte: number): {blockInput: BlockInputPreData; rootHex: string} {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.parentRoot = Buffer.alloc(32, parentByte);
+      const rootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const blockInput = BlockInputPreData.createFromBlock({
+        block,
+        blockRootHex: rootHex,
+        forkName: ForkName.phase0,
+        daOutOfRange: false,
+        seenTimestampSec: 0,
+        source: BlockInputSource.gossip,
+      });
+      return {blockInput, rootHex};
+    }
+
+    it("removes a peer's oldest retained block once its blocks exceed the byte budget", async () => {
+      const peerA = await getRandPeerIdStr();
+      const peerB = await getRandPeerIdStr();
+      const blocks = [1, 2, 3].map((slot) => unknownParentBlock(slot, 0xb0 + slot));
+      const otherPeerBlock = unknownParentBlock(4, 0xb4);
+      const blockSize = ssz.phase0.SignedBeaconBlock.value_serializedSize(blocks[0].blockInput.getBlock());
+      // Room for two blocks of a peer
+      const config = createChainForkConfig({...minimalConfig, MAX_PAYLOAD_SIZE: Math.floor(2.5 * blockSize)});
+
+      const {
+        service: svc,
+        chainEmitter,
+        chain,
+      } = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+        config,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      chainEmitter.emit(ChainEvent.blockUnknownParent, {
+        blockInput: otherPeerBlock.blockInput,
+        peer: peerB,
+        source: BlockInputSource.gossip,
+      });
+      for (const {blockInput} of blocks) {
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {blockInput, peer: peerA, source: BlockInputSource.gossip});
+      }
+
+      expect(pendingBlocks.has(blocks[0].rootHex)).toBe(false);
+      expect(chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blocks[0].rootHex);
+      expect(pendingBlocks.has(blocks[1].rootHex)).toBe(true);
+      expect(pendingBlocks.has(blocks[2].rootHex)).toBe(true);
+      expect(pendingBlocks.has(otherPeerBlock.rootHex)).toBe(true);
+
+      svc.close();
+    });
+
+    it("removes a retained block from the block input cache when capacity evicts it", async () => {
+      const peerA = await getRandPeerIdStr();
+      const blocks = Array.from({length: 60}, (_, i) => unknownParentBlock(i + 1, i + 1));
+
+      const {
+        service: svc,
+        chainEmitter,
+        chain,
+      } = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // Each block also adds its parent root, so small blocks fill the pending set before the byte budget
+      for (const {blockInput} of blocks) {
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {blockInput, peer: peerA, source: BlockInputSource.gossip});
+      }
+
+      const evicted = blocks.filter(({rootHex}) => !pendingBlocks.has(rootHex));
+      expect(evicted.length).toBeGreaterThan(0);
+      for (const {rootHex} of evicted) {
+        expect(chain.seenBlockInputCache.remove, `evicted block ${rootHex}`).toHaveBeenCalledWith(rootHex);
+      }
+      expect(chain.seenBlockInputCache.remove).toHaveBeenCalledTimes(evicted.length);
+
+      svc.close();
+    });
+
+    it("removes a block still waiting on its parent after two epochs without finality", async () => {
+      const peerA = await getRandPeerIdStr();
+      const {blockInput, rootHex} = unknownParentBlock(1, 0xc1);
+
+      vi.useFakeTimers({toFake: ["Date"]});
+      const {
+        service: svc,
+        chainEmitter,
+        chain,
+      } = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+      const twoEpochsMs = 2 * SLOTS_PER_EPOCH * minimalConfig.SLOT_DURATION_MS;
+
+      try {
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {blockInput, peer: peerA, source: BlockInputSource.gossip});
+
+        vi.advanceTimersByTime(twoEpochsMs);
+        (chain.clock as ClockStopped).emit(ClockEvent.slot, 2 * SLOTS_PER_EPOCH);
+        expect(pendingBlocks.has(rootHex)).toBe(true);
+
+        vi.advanceTimersByTime(1_000);
+        (chain.clock as ClockStopped).emit(ClockEvent.slot, 2 * SLOTS_PER_EPOCH + 1);
+        expect(pendingBlocks.has(rootHex)).toBe(false);
+        expect(chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(rootHex);
+      } finally {
+        svc.close();
+        vi.useRealTimers();
+      }
+    });
+
+    it("retries a rate-limited download when the backoff expires around the retry timer", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xaa);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const peerB = await getRandPeerIdStr();
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired,
+      // nor on another peer still being in backoff
+      for (const otherPeerInBackoff of [false, true]) {
+        for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+          vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+          let retryTimerDue = false;
+          let reads = 0;
+          const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+            if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+            return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+          });
+          const sendBeaconBlocksByRoot = vi
+            .fn()
+            .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+            .mockRejectedValue(new Error("no block"));
+          const {service: svc, chainEmitter} = setupBlockSyncTest({
+            processBlock: vi.fn(),
+            sendBeaconBlocksByRoot,
+            peer: peerA,
+          });
+
+          try {
+            chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+              rootHex: blockRootHex,
+              peer: peerA,
+              source: BlockInputSource.gossip,
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+            if (otherPeerInBackoff) {
+              const peerBalancer = (svc as unknown as {peerBalancer: UnknownBlockPeerBalancer}).peerBalancer;
+              peerBalancer.onPeerConnected(peerB, {
+                peerId: peerB,
+                client: "retention-test-client",
+                custodyColumns: [],
+                earliestAvailableSlot: 0,
+              });
+              peerBalancer.onRateLimited(peerB, rateLimitedUntilMs + 60_000);
+            }
+
+            retryTimerDue = true;
+            await vi.advanceTimersByTimeAsync(1100);
+
+            expect(
+              sendBeaconBlocksByRoot.mock.calls.length,
+              `otherPeerInBackoff=${otherPeerInBackoff} readsBeforeExpiry=${readsBeforeExpiry}`
+            ).toBeGreaterThan(1);
+          } finally {
+            svc.close();
+            dateNowSpy.mockRestore();
+            vi.useRealTimers();
+          }
+        }
+      }
+    });
+  });
+
+  describe("downloaded block proposer signature", () => {
+    const sigConfig = createBeaconConfig(minimalConfig, Buffer.alloc(32, 0x01));
+    const parentRoot = Buffer.alloc(32, 0xaa);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function signBlock(slot: number, proposerIndex: number, signerIndex = proposerIndex): phase0.SignedBeaconBlock {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.proposerIndex = proposerIndex;
+      block.message.parentRoot = parentRoot;
+      const {signingRoot} = getBlockProposerSignatureSet(sigConfig, block);
+      block.signature = interopSecretKey(signerIndex).sign(signingRoot).toBytes();
+      return block;
+    }
+
+    function resign(block: phase0.SignedBeaconBlock, signerIndex: number): phase0.SignedBeaconBlock {
+      const resigned = ssz.phase0.SignedBeaconBlock.clone(block);
+      const {signingRoot} = getBlockProposerSignatureSet(sigConfig, resigned);
+      resigned.signature = interopSecretKey(signerIndex).sign(signingRoot).toBytes();
+      return resigned;
+    }
+
+    function getRootHex(block: phase0.SignedBeaconBlock): string {
+      return toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+    }
+
+    function setupSignatureTest(servedBlocks: Map<PeerIdStr, phase0.SignedBeaconBlock[]>, finalizedSlot = 0) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(1);
+      const custodyConfig = {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: sigConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const connectedPeers = new Set<PeerIdStr>();
+      const reportPeer = vi.fn<INetwork["reportPeer"]>();
+      const sendBeaconBlocksByRoot = vi.fn(async (peerId: PeerIdStr, roots: Uint8Array[]) => {
+        const block = servedBlocks.get(peerId)?.find((b) => getRootHex(b) === toRootHex(roots[0]));
+        return block ? [ssz.phase0.SignedBeaconBlock.deserialize(ssz.phase0.SignedBeaconBlock.serialize(block))] : [];
+      });
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "signature-test-client",
+          custodyColumns: [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot,
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: sigConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: finalizedSlot}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls,
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(sigConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      const connect = (peer: PeerIdStr): void => {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: [],
+          clientAgent: "signature-test-client",
+        });
+      };
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      return {
+        svc,
+        emitter,
+        connect,
+        pendingBlocks,
+        processBlock,
+        reportPeer,
+        seenBlockInputCache,
+        bls,
+        sendBeaconBlocksByRoot,
+      };
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports only the peer serving an invalid proposer signature and imports the root from another peer", async () => {
+      const [attacker, honest, forwarder] = await Promise.all([
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+      ]);
+      const block = signBlock(1, 0);
+      const resigned = resign(block, 1);
+      const rootHex = getRootHex(block);
+      const {svc, emitter, connect, pendingBlocks, processBlock, reportPeer, seenBlockInputCache} = setupSignatureTest(
+        new Map([
+          [attacker, [resigned]],
+          [honest, [block]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: forwarder, source: BlockInputSource.gossip});
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID
+        );
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.get(rootHex)?.status).toBe(PendingBlockInputStatus.pending);
+
+        connect(honest);
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(processBlock).toHaveBeenCalledOnce();
+        expect(processBlock.mock.calls[0][0].getBlock().signature).toEqual(block.signature);
+        expect(new Set(reportPeer.mock.calls.map(([peer]) => peer))).toEqual(new Set([attacker]));
+        expect(pendingBlocks.has(rootHex)).toBe(false);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("rejects a downloaded block whose proposer is outside the pubkey cache without verifying it", async () => {
+      const attacker = await getRandPeerIdStr();
+      const block = signBlock(1, pubkeyCache.size, 0);
+      const rootHex = getRootHex(block);
+      const {svc, emitter, connect, pendingBlocks, processBlock, reportPeer, seenBlockInputCache, bls} =
+        setupSignatureTest(new Map([[attacker, [block]]]));
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets");
+
+      try {
+        connect(attacker);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.UNKNOWN_PROPOSER
+        );
+        expect(verifySignatureSets).not.toHaveBeenCalled();
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.get(rootHex)?.status).toBe(PendingBlockInputStatus.pending);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("drops a block below the finalized slot, such as unsigned genesis, without reporting peers", async () => {
+      const [honest, otherHonest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const genesisBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const rootHex = getRootHex(genesisBlock);
+      const {
+        svc,
+        emitter,
+        connect,
+        pendingBlocks,
+        processBlock,
+        reportPeer,
+        seenBlockInputCache,
+        bls,
+        sendBeaconBlocksByRoot,
+      } = setupSignatureTest(
+        new Map([
+          [honest, [genesisBlock]],
+          [otherHonest, [genesisBlock]],
+        ]),
+        1
+      );
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets");
+
+      try {
+        connect(honest);
+        connect(otherHonest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: honest, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
+        expect(verifySignatureSets).not.toHaveBeenCalled();
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.has(rootHex)).toBe(false);
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
+  describe("downloaded column sidecars", () => {
+    const fuluConfig = createBeaconConfig(blocksAndDataConfig, Buffer.alloc(32, 0x01));
+    const sampledColumns = [0, 1];
+    const parentRoot = Buffer.alloc(32, 0xbb);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function generateFuluBlock(): {
+      block: SignedBeaconBlock<ForkName.fulu>;
+      rootHex: string;
+      columns: fulu.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: slots.fulu, parentRoot});
+      // A clone, the generated values cache their hash tree roots
+      const block = ssz.fulu.SignedBeaconBlock.clone(generated.block);
+      block.message.proposerIndex = 0;
+      const signedBlockHeader = signedBlockToSignedHeader(fuluConfig, block);
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      return {block, rootHex, columns: generated.columnSidecars.map((column) => ({...column, signedBlockHeader}))};
+    }
+
+    function setupColumnTest(
+      block: SignedBeaconBlock<ForkName.fulu>,
+      servedColumns: Map<PeerIdStr, fulu.DataColumnSidecar[]>
+    ) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(block.message.slot + 1);
+      const custodyConfig = {sampledColumns, custodyColumns: sampledColumns} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: fuluConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      // Block and column headers carry the block signature, only a different header signature is verified
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      seenBlockInputCache.markVerifiedProposerSignature(block.message.slot, rootHex, block.signature);
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets").mockResolvedValue(false);
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const connectedPeers = new Set<PeerIdStr>();
+      const reportPeer = vi.fn<INetwork["reportPeer"]>();
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "column-test-client",
+          custodyColumns: sampledColumns,
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns, sampleGroups: sampledColumns.map((c) => [c])} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn(async () => [block]),
+        // Capped at the requested count like collectMaxResponseTyped
+        sendDataColumnSidecarsByRoot: vi.fn<INetwork["sendDataColumnSidecarsByRoot"]>(async (peerId, request) =>
+          (servedColumns.get(peerId) ?? []).slice(
+            0,
+            request.reduce((total, {columns}) => total + columns.length, 0)
+          )
+        ),
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: fuluConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls,
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(fuluConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      const connect = (peer: PeerIdStr): void => {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: sampledColumns,
+          clientAgent: "column-test-client",
+        });
+      };
+
+      return {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets};
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports a peer serving columns with an invalid KZG proof and imports the root from another peer", async () => {
+      const [attacker, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const [column0, column1] = columns;
+      const badColumn0 = {...column0, kzgProofs: column1.kzgProofs};
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([
+          [attacker, [badColumn0, column1]],
+          [honest, [column0, column1]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        connect(honest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reports and excludes a peer serving columns that were not requested", async () => {
+      const [attacker, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([
+          [attacker, [columns[0], columns[2]]],
+          [honest, [columns[1]]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        connect(honest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("does not report a peer serving columns with an invalid header signature", async () => {
+      const [peer, otherPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const otherHeader = {...columns[0].signedBlockHeader, signature: new Uint8Array(96)};
+      const {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets} = setupColumnTest(
+        block,
+        new Map([
+          [peer, columns.slice(0, 2).map((column) => ({...column, signedBlockHeader: otherHeader}))],
+          [otherPeer, columns.slice(0, 2)],
+        ])
+      );
+
+      try {
+        connect(peer);
+        connect(otherPeer);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(verifySignatureSets).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
+  describe("column sync for a supernode", () => {
+    const fuluConfig = createBeaconConfig(blocksAndDataConfig, Buffer.alloc(32, 0x01));
+    const allColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i);
+    const firstHalf = allColumns.slice(0, NUMBER_OF_COLUMNS / 2);
+    const secondHalf = allColumns.slice(NUMBER_OF_COLUMNS / 2);
+    const parentRoot = Buffer.alloc(32, 0xcc);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function generateFuluBlock(): {
+      block: SignedBeaconBlock<ForkName.fulu>;
+      rootHex: string;
+      columns: fulu.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: slots.fulu, parentRoot});
+      // A clone, the generated values cache their hash tree roots
+      const block = ssz.fulu.SignedBeaconBlock.clone(generated.block);
+      block.message.proposerIndex = 0;
+      const signedBlockHeader = signedBlockToSignedHeader(fuluConfig, block);
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      return {block, rootHex, columns: generated.columnSidecars.map((column) => ({...column, signedBlockHeader}))};
+    }
+
+    function setupSupernodeSyncTest(
+      block: SignedBeaconBlock<ForkName.fulu>,
+      columns: fulu.DataColumnSidecar[],
+      peerCustody: Map<PeerIdStr, number[]>
+    ) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(block.message.slot + 1);
+      const custodyConfig = {sampledColumns: allColumns, custodyColumns: allColumns} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: fuluConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      seenBlockInputCache.markVerifiedProposerSignature(block.message.slot, rootHex, block.signature);
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const triggerColumnReconstruction = vi.fn();
+      const connectedPeers = new Set<PeerIdStr>();
+      const sendDataColumnSidecarsByRoot = vi.fn<INetwork["sendDataColumnSidecarsByRoot"]>(async (peerId, request) =>
+        columns.filter(
+          (column) =>
+            (peerCustody.get(peerId) ?? []).includes(column.index) && request[0].columns.includes(column.index)
+        )
+      );
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "column-test-client",
+          custodyColumns: peerCustody.get(peerId) ?? [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {
+          sampledColumns: allColumns,
+          sampleGroups: allColumns.map((c) => [c]),
+        } as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn(async () => [block]),
+        sendDataColumnSidecarsByRoot,
+        reportPeer: vi.fn(),
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: fuluConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls: new BlsSingleThreadVerifier({metrics: null}),
+        columnReconstructionTracker: {triggerColumnReconstruction},
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(fuluConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      for (const [peer, custodyColumns] of peerCustody) {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns,
+          clientAgent: "column-test-client",
+        });
+      }
+
+      return {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot};
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("downloads the columns past half from another peer instead of reconstructing them", async () => {
+      const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([
+            [firstPeer, firstHalf],
+            [secondPeer, secondHalf],
+          ])
+        );
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(new Set(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer))).toEqual(
+          new Set([firstPeer, secondPeer])
+        );
+        const blockInput = processBlock.mock.calls[0][0];
+        expect(isBlockInputColumns(blockInput) && blockInput.hasComputedAllData()).toBe(true);
+        expect(triggerColumnReconstruction).not.toHaveBeenCalled();
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reconstructs instead of waiting when the peer with the remaining columns is rate limited", async () => {
+      const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([
+            [firstPeer, firstHalf],
+            [secondPeer, secondHalf],
+          ])
+        );
+      const serveColumns = sendDataColumnSidecarsByRoot.getMockImplementation();
+      sendDataColumnSidecarsByRoot.mockImplementation(async (peerId, request) => {
+        if (peerId === secondPeer) {
+          throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + 10_000});
+        }
+        return serveColumns ? serveColumns(peerId, request) : [];
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer)).toEqual([firstPeer, secondPeer]);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("does not ask a peer again after it returned only part of the requested columns", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(block, columns, new Map([[peer, allColumns]]));
+      // Claims to custody every column but serves half of them, then one per request
+      let served = NUMBER_OF_COLUMNS / 2;
+      sendDataColumnSidecarsByRoot.mockImplementation(async (_peerId, request) => {
+        const response = columns.filter((column) => request[0].columns.includes(column.index)).slice(0, served);
+        served = 1;
+        return response;
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("makes one more request once half the columns are present and then reconstructs", async () => {
+      const [firstPeer, ...otherPeers] = await Promise.all([
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+      ]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([[firstPeer, firstHalf], ...otherPeers.map((peer) => [peer, secondHalf] as [PeerIdStr, number[]])])
+        );
+      // The other peers claim the remaining columns but each serves a single one
+      sendDataColumnSidecarsByRoot.mockImplementation(async (peerId, request) => {
+        const requested = columns.filter((column) => request[0].columns.includes(column.index));
+        return peerId === firstPeer ? requested : requested.slice(0, 1);
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledTimes(2);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reconstructs the columns no peer can serve once half of them are downloaded", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction} = setupSupernodeSyncTest(
+        block,
+        columns,
+        new Map([[peer, firstHalf]])
+      );
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        const blockInput = processBlock.mock.calls[0][0];
+        expect(blockInput.hasAllData()).toBe(true);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(blockInput);
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
   describe("payload sync flows", () => {
     const gloasConfig = createBeaconConfig(
       {...minimalConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0},
@@ -793,26 +2018,33 @@ describe("UnknownBlockSync", () => {
       const networkEvents = new NetworkEventBus();
       const peersById = new Map(peers.map((peer) => [peer.peerId, peer]));
 
+      // start of the slot by default, so the poll loop sleeps to PAYLOAD_DUE and does not tick
+      // unless a test advances timers. Tests that exercise the poll set the clock themselves
+      const clock = new ClockStopped(0);
+
       const chain = {
         emitter,
-        clock: new ClockStopped(0),
+        clock,
         config: gloasConfig,
         custodyConfig,
         genesisTime: 0,
         metrics: null,
+        pubkeyCache,
         serializedCache: {delete: vi.fn()} as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
-          prune: vi.fn(),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
         seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
           hasBlockHex: vi.fn().mockReturnValue(false),
+          getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
           getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         } as unknown as IForkChoice,
         ...chainOverrides,
@@ -876,11 +2108,17 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -894,7 +2132,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -911,6 +2148,840 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
+    });
+
+    it("downloads the envelope from another peer when the first peer serves an invalid one", async () => {
+      const invalidPeer = await getRandPeerIdStr();
+      const validPeer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+      invalidEnvelope.signature = Buffer.alloc(96, 0xff);
+
+      vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+        if (signedEnvelope === invalidEnvelope) {
+          throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+            code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+            slot: 1,
+            root: blockRootHex,
+          });
+        }
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi
+        .fn()
+        .mockImplementation(async (peerId: PeerIdStr) => [peerId === invalidPeer ? invalidEnvelope : envelope]);
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        // enough sample groups to allow more than one download attempt per fetch
+        custodyConfig: {
+          sampledColumns: [],
+          sampleGroups: Array.from({length: gloasConfig.SAMPLES_PER_SLOT}, () => []),
+        } as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: invalidPeer}, {peerId: validPeer}],
+      });
+
+      // the root is gossiped by the peer serving the invalid envelope, so it is asked first
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer: invalidPeer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, invalidPeer, [blockRoot]);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(2, validPeer, [blockRoot]);
+      expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    describe("peer penalties", () => {
+      // enough sample groups to allow more than one download attempt per fetch
+      const sampleGroups = Array.from({length: gloasConfig.SAMPLES_PER_SLOT}, (_, i) => (i === 0 ? [0] : []));
+
+      function knownBlockOverrides(blockRootHex: string, payloadInput: PayloadEnvelopeInput): Partial<IBeaconChain> {
+        return {
+          processExecutionPayload: vi.fn().mockResolvedValue(undefined),
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        };
+      }
+
+      it("reports a peer that serves the envelope of another block", async () => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const otherEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+        otherEnvelope.message.beaconBlockRoot = Buffer.alloc(32, 0x99);
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockImplementation(async (peerId: PeerIdStr) => [peerId === badPeer ? otherEnvelope : envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: badPeer}, {peerId: goodPeer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, badPeer, [blockRoot]);
+        expect(reportPeer).toHaveBeenCalledOnce();
+        expect(reportPeer).toHaveBeenCalledWith(
+          badPeer,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT
+        );
+        expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      });
+
+      it.each<{code: ExecutionPayloadEnvelopeErrorCode; wrongField: "slot" | "blockHash" | "none"; reported: boolean}>([
+        {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH, wrongField: "slot", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH, wrongField: "blockHash", reported: true},
+        // Validation stops at the first failure, the builder index is checked before the block hash
+        {code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH, wrongField: "blockHash", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK, wrongField: "slot", reported: true},
+        // Range sync stores envelopes before these are checked, an honest peer may serve such an envelope
+        {code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH, wrongField: "none", reported: false},
+        {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE, wrongField: "none", reported: false},
+      ])(
+        "reports a peer serving an envelope that fails with $code and a wrong $wrongField: $reported",
+        async ({code, wrongField, reported}) => {
+          const badPeer = await getRandPeerIdStr();
+          const goodPeer = await getRandPeerIdStr();
+          const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+            blobCount: 0,
+            sampledColumns: [],
+            slot: 1,
+          });
+          const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+          if (wrongField === "slot") invalidEnvelope.message.payload.slotNumber = 2;
+          if (wrongField === "blockHash") invalidEnvelope.message.payload.blockHash = Buffer.alloc(32, 0xaa);
+          vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+            if (signedEnvelope === invalidEnvelope) {
+              throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+                code,
+                slot: 1,
+                root: blockRootHex,
+              } as never);
+            }
+          });
+
+          const sendExecutionPayloadEnvelopesByRoot = vi
+            .fn()
+            .mockImplementation(async (peerId: PeerIdStr) => [peerId === badPeer ? invalidEnvelope : envelope]);
+          const reportPeer = vi.fn();
+          const {emitter} = setupPayloadSyncTest({
+            chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+            custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+            networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+            peers: [{peerId: badPeer}, {peerId: goodPeer}],
+          });
+
+          emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: blockRootHex,
+            peer: badPeer,
+            source: BlockInputSource.gossip,
+          });
+          await sleep(50);
+
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+          if (reported) {
+            expect(reportPeer).toHaveBeenCalledOnce();
+            expect(reportPeer).toHaveBeenCalledWith(badPeer, PeerAction.LowToleranceError, code);
+          } else {
+            expect(reportPeer).not.toHaveBeenCalled();
+          }
+          expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+        }
+      );
+
+      it("does not report a peer serving the envelope of a finalized block", async () => {
+        const peer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        // Every copy fails once the block is finalized
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockRejectedValue(
+          new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+            code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK,
+            envelopeSlot: 1,
+            finalizedSlot: 8,
+          } as never)
+        );
+
+        const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: peer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalled();
+        expect(reportPeer).not.toHaveBeenCalled();
+      });
+
+      it("reports the peer that served the envelope when it is validated with the peer of a later attempt", async () => {
+        const envelopePeer = await getRandPeerIdStr();
+        const laterPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+        invalidEnvelope.message.payload.blockHash = Buffer.alloc(32, 0xaa);
+        // The first validation fails for a reason that keeps the envelope, the second one finds the mismatch
+        vi.mocked(validateGossipExecutionPayloadEnvelope)
+          .mockRejectedValueOnce(new Error("state regen failed"))
+          .mockRejectedValueOnce(
+            new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+              code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+              slot: 1,
+              root: blockRootHex,
+              envelopeBlockHash: toRootHex(invalidEnvelope.message.payload.blockHash),
+              bidBlockHash: payloadInput.getBlockHashHex(),
+            })
+          );
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockResolvedValueOnce([invalidEnvelope])
+          .mockResolvedValue([envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: envelopePeer}, {peerId: laterPeer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: envelopePeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, envelopePeer, expect.anything());
+        expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+        expect(reportPeer).toHaveBeenCalledOnce();
+        expect(reportPeer).toHaveBeenCalledWith(
+          envelopePeer,
+          PeerAction.LowToleranceError,
+          ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH
+        );
+      });
+
+      it.each<{response: "invalid" | "unrequested" | "empty"; code: string | null}>([
+        {response: "invalid", code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH},
+        {response: "unrequested", code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED},
+        // Peers may not have the columns yet
+        {response: "empty", code: null},
+      ])("reports a peer serving $response payload columns: $code", async ({response, code}) => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+          blobCount: 1,
+          sampledColumns: [0],
+          slot: 1,
+        });
+        payloadInput.addPayloadEnvelope({
+          envelope,
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+          peerIdStr: goodPeer,
+        });
+
+        const invalidColumns = [ssz.gloas.DataColumnSidecar.clone(columnSidecars[0])];
+        const unrequestedColumn = ssz.gloas.DataColumnSidecar.clone(columnSidecars[0]);
+        unrequestedColumn.index = 1;
+        const badResponse = {invalid: invalidColumns, unrequested: [unrequestedColumn], empty: []}[response];
+        vi.mocked(validateGloasBlockDataColumnSidecars).mockImplementation(
+          async (_slot, _root, _commitments, columns) => {
+            if (columns === invalidColumns) {
+              throw new DataColumnSidecarValidationError({
+                code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH,
+                slot: 1,
+                reason: "test",
+              });
+            }
+          }
+        );
+
+        const sendDataColumnSidecarsByRoot = vi
+          .fn()
+          .mockImplementation(async (peerId: PeerIdStr) => (peerId === badPeer ? badResponse : columnSidecars));
+        const reportPeer = vi.fn();
+        const chainOverrides = knownBlockOverrides(blockRootHex, payloadInput);
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides,
+          custodyConfig: {sampledColumns: [0], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendDataColumnSidecarsByRoot, reportPeer},
+          peers: [
+            {peerId: badPeer, custodyColumns: [0]},
+            {peerId: goodPeer, custodyColumns: [0]},
+          ],
+        });
+
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+          payloadInput,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledTimes(2);
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenNthCalledWith(1, badPeer, expect.anything());
+        if (code !== null) {
+          expect(reportPeer).toHaveBeenCalledOnce();
+          expect(reportPeer).toHaveBeenCalledWith(badPeer, PeerAction.LowToleranceError, code);
+        } else {
+          expect(reportPeer).not.toHaveBeenCalled();
+        }
+        expect(payloadInput.hasAllData()).toBe(true);
+        expect(chainOverrides.processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      });
+
+      it.each<{code: ExecutionPayloadEnvelopeErrorCode; wrongField: "slot" | "blockHash" | "none"; reported: boolean}>([
+        {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH, wrongField: "blockHash", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH, wrongField: "slot", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH, wrongField: "blockHash", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK, wrongField: "slot", reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK, wrongField: "none", reported: false},
+      ])(
+        "reports the peer of an envelope failing with $code and a wrong $wrongField once its block is imported: $reported",
+        async ({code, wrongField, reported}) => {
+          const peer = await getRandPeerIdStr();
+          const {block, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+            blobCount: 0,
+            sampledColumns: [],
+            slot: 1,
+          });
+          const parentRootHex = toRootHex(block.message.parentRoot);
+          const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+          if (wrongField === "slot") invalidEnvelope.message.payload.slotNumber = 2;
+          if (wrongField === "blockHash") invalidEnvelope.message.payload.blockHash = Buffer.alloc(32, 0xaa);
+          vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+            if (signedEnvelope === invalidEnvelope) {
+              throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+                code,
+                slot: 1,
+                root: blockRootHex,
+              } as never);
+            }
+          });
+
+          let cachedPayloadInput: PayloadEnvelopeInput | undefined;
+          const knownRoots = new Set([parentRootHex]);
+
+          // the invalid envelope is downloaded before the block is known and can only be validated after its import
+          const sendExecutionPayloadEnvelopesByRoot = vi
+            .fn()
+            .mockResolvedValueOnce([invalidEnvelope])
+            .mockResolvedValue([envelope]);
+          const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+          const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+          const reportPeer = vi.fn();
+          const processBlock = vi.fn().mockImplementation(async () => {
+            cachedPayloadInput = payloadInput;
+            knownRoots.add(blockRootHex);
+            emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+          });
+          const {emitter} = setupPayloadSyncTest({
+            chainOverrides: {
+              processBlock,
+              processExecutionPayload,
+              seenPayloadEnvelopeInputCache: {
+                add: vi.fn(),
+                get: vi
+                  .fn()
+                  .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+                getOrReload: vi
+                  .fn()
+                  .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+                remove: vi.fn(),
+              } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+              seenBlockInputCache: {
+                getByBlock: ({
+                  block,
+                  blockRootHex,
+                  seenTimestampSec,
+                  source,
+                }: {
+                  block: gloas.SignedBeaconBlock;
+                  blockRootHex: string;
+                  seenTimestampSec: number;
+                  source: BlockInputSource;
+                }) => createGloasBlockInput({block, blockRootHex, seenTimestampSec, source}),
+                prune: vi.fn(),
+                isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+              } as unknown as SeenBlockInput,
+              forkChoice: {
+                hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+                hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+                getBlockHexDefaultStatus: vi
+                  .fn()
+                  .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
+                getBlockHexAndBlockHash: vi
+                  .fn()
+                  .mockImplementation((root: string, hash: string) =>
+                    root === parentRootHex &&
+                    hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                      ? ({slot: 0} as ProtoBlock)
+                      : null
+                  ),
+                getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+              } as unknown as IForkChoice,
+            },
+            networkOverrides: {sendExecutionPayloadEnvelopesByRoot, sendBeaconBlocksByRoot, reportPeer},
+            peers: [{peerId: peer}],
+          });
+
+          const peerBalancer = (service as unknown as {peerBalancer: UnknownBlockPeerBalancer}).peerBalancer;
+          const bestPeerForPendingColumns = peerBalancer.bestPeerForPendingColumns.bind(peerBalancer);
+          const preferredPeersPerCall: PeerIdStr[][] = [];
+          vi.spyOn(peerBalancer, "bestPeerForPendingColumns").mockImplementation(
+            (pendingColumns, excludedPeers, preferredPeers, now) => {
+              preferredPeersPerCall.push([...(preferredPeers ?? [])]);
+              return bestPeerForPendingColumns(pendingColumns, excludedPeers, preferredPeers, now);
+            }
+          );
+
+          emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: blockRootHex,
+            peer,
+            source: BlockInputSource.gossip,
+          });
+          await sleep(50);
+
+          expect(processBlock).toHaveBeenCalledOnce();
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+          if (reported) {
+            expect(reportPeer).toHaveBeenCalledOnce();
+            expect(reportPeer).toHaveBeenCalledWith(peer, PeerAction.LowToleranceError, code);
+          } else {
+            expect(reportPeer).not.toHaveBeenCalled();
+          }
+          // The refetch does not prefer the peer that served the envelope
+          expect(preferredPeersPerCall.at(-1)).not.toContain(peer);
+          expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+          expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+        }
+      );
+    });
+
+    it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {
+      const peer = await getRandPeerIdStr();
+      const otherPeer = await getRandPeerIdStr();
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired,
+      // nor on another peer still being in backoff
+      for (const otherPeerInBackoff of [false, true]) {
+        for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+          vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+          let retryTimerDue = false;
+          let reads = 0;
+          const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+            if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+            return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+          });
+          const {payloadInput} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+          const sendExecutionPayloadEnvelopesByRoot = vi
+            .fn()
+            .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+            .mockRejectedValue(new Error("no envelope"));
+          const {emitter} = setupPayloadSyncTest({
+            networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+            peers: [{peerId: peer}],
+          });
+
+          try {
+            emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+            await vi.advanceTimersByTimeAsync(0);
+            expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+
+            if (otherPeerInBackoff) {
+              const peerBalancer = (service as unknown as {peerBalancer: UnknownBlockPeerBalancer}).peerBalancer;
+              peerBalancer.onPeerConnected(otherPeer, {
+                peerId: otherPeer,
+                client: "payload-test-client",
+                custodyColumns: [],
+                earliestAvailableSlot: 0,
+              });
+              peerBalancer.onRateLimited(otherPeer, rateLimitedUntilMs + 60_000);
+            }
+
+            retryTimerDue = true;
+            await vi.advanceTimersByTimeAsync(1100);
+
+            expect(
+              sendExecutionPayloadEnvelopesByRoot.mock.calls.length,
+              `otherPeerInBackoff=${otherPeerInBackoff} readsBeforeExpiry=${readsBeforeExpiry}`
+            ).toBeGreaterThan(1);
+          } finally {
+            service.close();
+            dateNowSpy.mockRestore();
+            vi.useRealTimers();
+          }
+        }
+      }
+    });
+
+    it("fetches immediately for a slot-less envelope search", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+        blobCount: 1,
+        sampledColumns: [0],
+        slot: 1,
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const sendDataColumnSidecarsByRoot = vi.fn().mockResolvedValue(columnSidecars);
+      const {chain, emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      // early in the current slot, but a slot-less search is never deferred: its peer has the payload
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
+    });
+
+    it("retries a failed current-slot payload fetch on an interval within the slot", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockRejectedValue(new Error("TEST_ERROR"));
+      const {chain, emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+      // a slot-less search is added to pendingPayloads and fetched right away
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+
+      // the slot's poll loop retries every pending payload each tick. Put the clock at PAYLOAD_DUE
+      // so a fresh loop ticks straight away, then once more an interval later
+      (chain.clock as ClockStopped).setMsIntoSlot(gloasConfig.getPayloadDueMs(ForkName.gloas));
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
+      await vi.advanceTimersByTimeAsync(PAYLOAD_POLL_INTERVAL_MS);
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(3);
+    });
+
+    it("defers an optimistic payload search until PAYLOAD_DUE, then searches", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const {chain, emitter} = setupPayloadSyncTest({
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      // early in the current slot: the payload is not due to exist yet
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      // the slot's poll loop moves the deferred root into pendingPayloads and searches at PAYLOAD_DUE
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
+      (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
+      await vi.advanceTimersByTimeAsync(payloadDueMs);
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops a deferred payload search when gossip delivers before PAYLOAD_DUE", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      // gossip imports the payload while the search waits: fork choice knows it by PAYLOAD_DUE
+      const {chain, emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
+      (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
+      await vi.advanceTimersByTimeAsync(payloadDueMs + PAYLOAD_POLL_INTERVAL_MS);
+
+      // the deferral paid off: nothing was ever added to pendingPayloads, nothing fetched
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+    });
+
+    it("searches a root left over from the previous slot at the next slot", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const {chain, emitter} = setupPayloadSyncTest({
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      // the slot ends before its loop ever ticks, so the root was never searched
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      // the next slot flushes it into pendingPayloads instead of dropping it
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
+      (chain.clock as ClockStopped).setSlot(1);
+      (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 1);
+
+      await vi.advanceTimersByTimeAsync(PAYLOAD_POLL_INTERVAL_MS);
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalled();
+    });
+
+    it("searches a root deferred after PAYLOAD_DUE on the poll loop's next tick", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const {chain, emitter} = setupPayloadSyncTest({
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+      (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
+
+      // no root is deferred yet: the loop keeps ticking on an empty map instead of returning
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
+      (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
+      await vi.advanceTimersByTimeAsync(payloadDueMs);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await vi.advanceTimersByTimeAsync(PAYLOAD_POLL_INTERVAL_MS);
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalled();
+    });
+
+    it("does not resurrect a payload entry pruned while its download was in flight", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+        blobCount: 1,
+        sampledColumns: [0],
+        slot: 1,
+      });
+
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+
+      let pendingPayloads: Map<string, PayloadSyncCacheItem> | undefined;
+      // Simulate pruneFinalized deleting the entry while the network fetch is in flight.
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockImplementation(async () => {
+        pendingPayloads?.delete(blockRootHex);
+        return [envelope];
+      });
+      const sendDataColumnSidecarsByRoot = vi.fn().mockResolvedValue(columnSidecars);
+
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      pendingPayloads = (service as unknown as {pendingPayloads: Map<string, PayloadSyncCacheItem>}).pendingPayloads;
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      // Entry deleted mid-fetch must not be resurrected by the post-await set...
+      expect(pendingPayloads.has(blockRootHex)).toBe(false);
+      // ...and the pruned payload must not be processed.
+      expect(processExecutionPayload).not.toHaveBeenCalled();
     });
 
     it("continues fetching sampled columns across peers until payload input is complete", async () => {
@@ -947,11 +3018,17 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -968,7 +3045,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer: peerA,
         source: BlockInputSource.gossip,
       });
@@ -1013,7 +3089,10 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1034,10 +3113,14 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1058,7 +3141,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1072,6 +3154,40 @@ describe("UnknownBlockSync", () => {
       expect(processBlock).toHaveBeenCalledTimes(1);
       expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledOnce();
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    it("backs off the block download of an envelope waiting on its block", async () => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const sendBeaconBlocksByRoot = vi.fn().mockRejectedValue(new Error("no block"));
+      const {emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot, sendBeaconBlocksByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        // every search reconciles the envelope, which must not retry its block before the backoff expires
+        (service as unknown as {triggerUnknownBlockSearch: () => void}).triggerUnknownBlockSearch();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2);
+      } finally {
+        service.close();
+        vi.useRealTimers();
+      }
     });
 
     it("defers envelope validation until the block is in fork choice when payload input is seeded from the block body", async () => {
@@ -1114,7 +3230,10 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1135,10 +3254,14 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1157,11 +3280,10 @@ describe("UnknownBlockSync", () => {
         peers: [{peerId: peer}],
       }));
 
-      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // tsc overload-resolution miss when emit is reached through a closure that captures emitter
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys (see #9491).
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1173,9 +3295,16 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
       expect(sendBeaconBlocksByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
       expect(processBlock).toHaveBeenCalledTimes(1);
+      // Validation runs exactly once: the first reconcile pass seeds the envelope into payloadInput, so any
+      // racing scheduler pass sees hasPayloadEnvelope() and skips revalidation.
       expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-      expect(processExecutionPayload).toHaveBeenCalledTimes(1);
-      expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      // Two racing scheduler passes may both reach processPayload, but every call carries the SAME payloadInput
+      // object; chain.processExecutionPayload (via processPayloadEnvelopeJob's WeakMap) dedups them into one
+      // real import. This mock bypasses that dedup, so assert on object identity rather than an exact count.
+      expect(processExecutionPayload).toHaveBeenCalled();
+      for (const [arg] of processExecutionPayload.mock.calls) {
+        expect(arg).toBe(payloadInput);
+      }
     });
 
     it("downloads the block and retries payload import when EL reports block not in fork choice", async () => {
@@ -1193,7 +3322,7 @@ describe("UnknownBlockSync", () => {
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValueOnce(
-          new PayloadError({
+          new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
             code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
             blockRootHex,
           })
@@ -1209,7 +3338,10 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1230,10 +3362,14 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1257,11 +3393,10 @@ describe("UnknownBlockSync", () => {
         emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
       });
 
-      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // tsc overload-resolution miss when emit is reached through a closure that captures emitter
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys.
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1290,7 +3425,7 @@ describe("UnknownBlockSync", () => {
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValueOnce(
-          new PayloadError({
+          new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
             code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
             execStatus: ExecutionPayloadStatus.ELERROR,
             errorMessage: "execution engine offline",
@@ -1304,11 +3439,17 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1318,7 +3459,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1359,7 +3499,10 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         },
         networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
@@ -1368,7 +3511,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1381,7 +3523,335 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).not.toHaveBeenCalled();
     });
 
-    it("processes incomplete payload envelope input without network fetch", async () => {
+    it.each([false, true])("upgrades an idle root on incomplete payload gossip, complete=%s", async (complete) => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValueOnce([]).mockResolvedValue([envelope]);
+      const {chain, emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+      try {
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+        expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+        if (complete) {
+          payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+        }
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(complete ? 1 : 2);
+        expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+      } finally {
+        service.close();
+      }
+    });
+
+    it.each(["input", "root"])(
+      "deduplicates incomplete payload events during a fetch started from %s",
+      async (initial) => {
+        const peer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+        const firstFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockReturnValueOnce(firstFetch.promise)
+          .mockResolvedValue([envelope]);
+        const {chain, emitter} = setupPayloadSyncTest({
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+          peers: [{peerId: peer}],
+        });
+        vi.mocked(chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+        vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockResolvedValue(payloadInput);
+        vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+        try {
+          if (initial === "root") {
+            emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+              rootHex: blockRootHex,
+              peer,
+              source: BlockInputSource.gossip,
+            });
+          } else {
+            emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+          }
+          await vi.advanceTimersByTimeAsync(0);
+
+          for (let i = 0; i < 128; i++) {
+            emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+          }
+          await vi.advanceTimersByTimeAsync(0);
+
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+          expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+          firstFetch.resolve([]);
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+          expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+          emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+          await vi.advanceTimersByTimeAsync(0);
+
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+          expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        } finally {
+          firstFetch.resolve([]);
+          service.close();
+        }
+      }
+    );
+
+    it("deduplicates incomplete payload events during processing and retries after failure", async () => {
+      const peer = await getRandPeerIdStr();
+      const {payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+      const firstProcess = defer<void>();
+      const processExecutionPayload = vi.fn().mockReturnValueOnce(firstProcess.promise).mockResolvedValue(undefined);
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn();
+      const {chain, emitter} = setupPayloadSyncTest({
+        chainOverrides: {processExecutionPayload},
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+      try {
+        for (let i = 0; i < 128; i++) {
+          emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        }
+        await vi.advanceTimersByTimeAsync(0);
+        expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+
+        firstProcess.reject(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.SYNCING,
+            errorMessage: "Execution engine unavailable",
+          })
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+        expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+      } finally {
+        firstProcess.resolve();
+        service.close();
+      }
+    });
+
+    it.each(["reload", "validation success", "validation failure"])(
+      "does not replace an active fetch when stale envelope reconciliation finishes %s",
+      async (stage) => {
+        const peer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+          blobCount: 1,
+          sampledColumns: [0],
+          slot: 1,
+        });
+        const reload = defer<PayloadEnvelopeInput | undefined>();
+        const validation = defer<void>();
+        const currentFetch = defer<gloas.DataColumnSidecar[]>();
+        const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+        const sendDataColumnSidecarsByRoot = vi.fn().mockReturnValue(currentFetch.promise);
+        const {chain, emitter} = setupPayloadSyncTest({
+          custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+          networkOverrides: {
+            sendExecutionPayloadEnvelopesByRoot,
+            sendDataColumnSidecarsByRoot,
+            sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([]),
+          },
+          peers: [{peerId: peer, custodyColumns: [0]}],
+        });
+
+        try {
+          emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: blockRootHex,
+            peer,
+            source: BlockInputSource.gossip,
+          });
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+          expect(validateGossipExecutionPayloadEnvelope).not.toHaveBeenCalled();
+
+          vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+          vi.mocked(chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+          vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockResolvedValue(payloadInput);
+          if (stage === "reload") {
+            vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockReturnValueOnce(reload.promise);
+          } else {
+            vi.mocked(validateGossipExecutionPayloadEnvelope).mockReturnValueOnce(validation.promise);
+          }
+          const reloadCount = vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mock.calls.length;
+          emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+          await vi.advanceTimersByTimeAsync(0);
+          expect(chain.seenPayloadEnvelopeInputCache.getOrReload).toHaveBeenCalledTimes(reloadCount + 1);
+          expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledTimes(stage === "reload" ? 0 : 1);
+
+          emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
+
+          if (stage === "validation failure") {
+            validation.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+          } else validation.resolve();
+          reload.resolve(payloadInput);
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+          expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+          currentFetch.resolve(columnSidecars);
+          await vi.advanceTimersByTimeAsync(0);
+          expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        } finally {
+          reload.resolve(undefined);
+          validation.resolve();
+          currentFetch.resolve([]);
+          service.close();
+        }
+      }
+    );
+
+    it("validates an envelope-only entry before upgrading it on incomplete payload gossip", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      const validation = defer<void>();
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const {chain, emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot, sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([])},
+        peers: [{peerId: peer}],
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+        expect(validateGossipExecutionPayloadEnvelope).not.toHaveBeenCalled();
+
+        vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+        vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockResolvedValue(payloadInput);
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockReturnValueOnce(validation.promise);
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(chain, envelope);
+        expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+        expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+        validation.resolve();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+      } finally {
+        validation.resolve();
+        service.close();
+      }
+    });
+
+    it("does not replace a re-admitted payload when its pruned download finishes", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      const oldFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+      const currentFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+      const sendExecutionPayloadEnvelopesByRoot = vi
+        .fn()
+        .mockReturnValueOnce(oldFetch.promise)
+        .mockReturnValue(currentFetch.promise);
+      const {chain, emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+      try {
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        vi.mocked(chain.forkChoice.getFinalizedBlock).mockReturnValue({slot: 2} as ProtoBlock);
+        emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 0, root: blockRoot, rootHex: blockRootHex});
+
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+
+        oldFetch.resolve([envelope]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(chain.processExecutionPayload).not.toHaveBeenCalled();
+
+        currentFetch.resolve([envelope]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+      } finally {
+        oldFetch.resolve([]);
+        currentFetch.resolve([]);
+        service.close();
+      }
+    });
+
+    it("does not remove a re-admitted payload when its pruned processing fails", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+      const oldProcess = defer<void>();
+      const currentProcess = defer<void>();
+      const processExecutionPayload = vi
+        .fn()
+        .mockReturnValueOnce(oldProcess.promise)
+        .mockReturnValue(currentProcess.promise);
+      const {chain, emitter} = setupPayloadSyncTest({chainOverrides: {processExecutionPayload}});
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+      const removeInvalid = vi.fn();
+      chain.seenPayloadEnvelopeInputCache.removeInvalid = removeInvalid;
+
+      try {
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        vi.mocked(chain.forkChoice.getFinalizedBlock).mockReturnValue({slot: 2} as ProtoBlock);
+        emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 0, root: blockRoot, rootHex: blockRootHex});
+
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+
+        oldProcess.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+        await vi.advanceTimersByTimeAsync(0);
+        expect(removeInvalid).not.toHaveBeenCalled();
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+
+        currentProcess.resolve();
+        await vi.advanceTimersByTimeAsync(0);
+      } finally {
+        oldProcess.resolve();
+        currentProcess.resolve();
+        service.close();
+      }
+    });
+
+    it("processes duplicate incomplete payload events once without network fetch", async () => {
       const peer = await getRandPeerIdStr();
       const {payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
       payloadInput.addPayloadEnvelope({
@@ -1397,11 +3867,17 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(payloadInput),
-            prune: vi.fn(),
+            getOrReload: vi.fn().mockResolvedValue(payloadInput),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === payloadInput.blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) =>
+                root === payloadInput.blockRootHex ? ({slot: 0} as ProtoBlock) : null
+              ),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1412,11 +3888,46 @@ describe("UnknownBlockSync", () => {
         peer,
         source: BlockInputSource.gossip,
       });
+      emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
 
       await sleep(20);
 
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    it("completes processing when the payload imported event removes the entry first", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+      // importExecutionPayload emits the executionPayload event before processExecutionPayload resolves
+      const processExecutionPayload = vi.fn().mockImplementation(async () => {
+        emitter.emit(routes.events.EventType.executionPayload, {
+          slot: payloadInput.slot,
+          builderIndex: 0,
+          blockHash: toRootHex(Buffer.alloc(32, 0x44)),
+          blockRoot: blockRootHex,
+          executionOptimistic: false,
+        });
+      });
+      const debug = vi.spyOn(logger, LogLevel.debug);
+      const {chain, emitter} = setupPayloadSyncTest({chainOverrides: {processExecutionPayload}});
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+      try {
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        expect(debug.mock.calls.some(([message]) => message === "Processed payload from unknown sync")).toBe(true);
+      } finally {
+        debug.mockRestore();
+        service.close();
+      }
     });
 
     it("downloads parent payload for unknown parent block when parent block is already known", async () => {
@@ -1461,7 +3972,10 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi
@@ -1508,6 +4022,279 @@ describe("UnknownBlockSync", () => {
       );
     });
 
+    it("resolvePayloadSlot prefers pending block (S2), then fork choice (S3), then seen cache (S4)", () => {
+      const getBlockHexDefaultStatus = vi.fn().mockReturnValue(null);
+      const seenGet = vi.fn().mockReturnValue(undefined);
+      setupPayloadSyncTest({
+        chainOverrides: {
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: seenGet,
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus,
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+      });
+
+      const svc = service as unknown as {
+        resolvePayloadSlot: (rootHex: string) => number | undefined;
+        pendingBlocks: Map<string, BlockInputSyncCacheItem>;
+      };
+      const rootHex = toRootHex(Buffer.alloc(32, 0xe1));
+
+      // no trusted source -> undefined
+      expect(svc.resolvePayloadSlot(rootHex)).toBeUndefined();
+
+      // S4: seen payload envelope cache
+      seenGet.mockReturnValue({slot: 50});
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(50);
+
+      // S3: fork choice overrides S4
+      getBlockHexDefaultStatus.mockReturnValue({slot: 40} as ProtoBlock);
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(40);
+
+      // S2: a pending block of the same root overrides S3
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 30;
+      svc.pendingBlocks.set(rootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block,
+          blockRootHex: rootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(30);
+    });
+
+    it("prunes pending payloads and blocks below the finalized block slot on ChainEvent.forkChoiceFinalized", () => {
+      const finalizedEpoch = 4;
+      // Simulate a skipped epoch boundary: the finalized block sits below computeStartSlotAtEpoch(epoch).
+      // The prune must use the actual finalized block slot, not the epoch boundary, otherwise it would
+      // wrongly drop the finalized block's own payload and payloads in the (finalizedBlockSlot, boundary) gap.
+      const epochBoundarySlot = computeStartSlotAtEpoch(finalizedEpoch);
+      const finalizedBlockSlot = epochBoundarySlot - 2;
+
+      // A slot-less payload whose block is in fork choice (S3) below finality -> resolved + pruned.
+      const rootHexResolvable = toRootHex(Buffer.alloc(32, 0xa5));
+      const resolvableSlot = finalizedBlockSlot - 4;
+
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) =>
+                root === rootHexResolvable ? ({slot: resolvableSlot} as ProtoBlock) : null
+              ),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: finalizedBlockSlot} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+      });
+
+      const pendingPayloads = (service as unknown as {pendingPayloads: Map<string, PayloadSyncCacheItem>})
+        .pendingPayloads;
+      const pendingBlocks = (service as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // PendingPayloadRootHex just below the finalized block slot -> pruned
+      const rootHexBelow = toRootHex(Buffer.alloc(32, 0xa1));
+      pendingPayloads.set(rootHexBelow, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexBelow,
+        slot: finalizedBlockSlot - 1,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadRootHex at the finalized block slot -> retained (its payload may still be needed by a
+      // not-yet-imported successor; prune is strict `<`)
+      const rootHexAtFinalized = toRootHex(Buffer.alloc(32, 0xa2));
+      pendingPayloads.set(rootHexAtFinalized, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexAtFinalized,
+        slot: finalizedBlockSlot,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadRootHex in the (finalizedBlockSlot, epochBoundarySlot) gap -> retained. Regression guard:
+      // an epoch-boundary cutoff would wrongly prune this.
+      const rootHexBetween = toRootHex(Buffer.alloc(32, 0xa3));
+      pendingPayloads.set(rootHexBetween, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexBetween,
+        slot: finalizedBlockSlot + 1,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadInput below finality -> pruned (slot resolved from payloadInput.slot)
+      const {blockRootHex: inputRootHex, payloadInput} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: finalizedBlockSlot - 2,
+      });
+      pendingPayloads.set(inputRootHex, {
+        status: PendingPayloadInputStatus.pending,
+        payloadInput,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadEnvelope below finality -> pruned (slot resolved from envelope slotNumber)
+      const {blockRootHex: envelopeRootHex, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: finalizedBlockSlot - 3,
+      });
+      pendingPayloads.set(envelopeRootHex, {
+        status: PendingPayloadInputStatus.waitingForBlock,
+        envelope,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingPayloadRootHex, resolved from fork choice (S3) at prune time -> pruned
+      pendingPayloads.set(rootHexResolvable, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexResolvable,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingPayloadRootHex with no trusted source, recently added -> retained until aged out
+      const rootHexUnresolvableRecent = toRootHex(Buffer.alloc(32, 0xa6));
+      pendingPayloads.set(rootHexUnresolvableRecent, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexUnresolvableRecent,
+        timeAddedSec: Date.now() / 1000,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingPayloadRootHex with no trusted source, added long ago -> aged out and pruned
+      const rootHexUnresolvableStale = toRootHex(Buffer.alloc(32, 0xa8));
+      pendingPayloads.set(rootHexUnresolvableStale, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexUnresolvableStale,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      expect(pendingPayloads.size).toBe(8);
+
+      // PendingBlockInput below finality -> pruned (slot resolved from blockInput.slot)
+      const blockBelow = ssz.gloas.SignedBeaconBlock.defaultValue();
+      blockBelow.message.slot = finalizedBlockSlot - 1;
+      const blockBelowRootHex = toRootHex(getGloasBlockRoot(blockBelow));
+      pendingBlocks.set(blockBelowRootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block: blockBelow,
+          blockRootHex: blockBelowRootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingBlockInput at the finalized block slot -> retained
+      const blockAtFinalized = ssz.gloas.SignedBeaconBlock.defaultValue();
+      blockAtFinalized.message.slot = finalizedBlockSlot;
+      const blockAtFinalizedRootHex = toRootHex(getGloasBlockRoot(blockAtFinalized));
+      pendingBlocks.set(blockAtFinalizedRootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block: blockAtFinalized,
+          blockRootHex: blockAtFinalizedRootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingRootHex added long ago -> aged out and pruned
+      const rootOnlyStaleHex = toRootHex(Buffer.alloc(32, 0xb1));
+      pendingBlocks.set(rootOnlyStaleHex, {
+        status: PendingBlockInputStatus.pending,
+        rootHex: rootOnlyStaleHex,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingRootHex added recently -> retained for a later download attempt
+      const rootOnlyRecentHex = toRootHex(Buffer.alloc(32, 0xb2));
+      pendingBlocks.set(rootOnlyRecentHex, {
+        status: PendingBlockInputStatus.pending,
+        rootHex: rootOnlyRecentHex,
+        timeAddedSec: Date.now() / 1000,
+        peerIdStrings: new Set(),
+      });
+
+      expect(pendingBlocks.size).toBe(4);
+
+      const checkpoint: CheckpointWithHex = {
+        epoch: finalizedEpoch,
+        root: Buffer.alloc(32, 0xcc),
+        rootHex: toRootHex(Buffer.alloc(32, 0xcc)),
+      };
+      emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
+
+      expect(pendingPayloads.has(rootHexBelow)).toBe(false);
+      expect(pendingPayloads.has(inputRootHex)).toBe(false);
+      expect(pendingPayloads.has(envelopeRootHex)).toBe(false);
+      expect(pendingPayloads.has(rootHexResolvable)).toBe(false);
+      expect(pendingPayloads.has(rootHexUnresolvableStale)).toBe(false);
+      expect(pendingPayloads.has(rootHexAtFinalized)).toBe(true);
+      expect(pendingPayloads.has(rootHexBetween)).toBe(true);
+      expect(pendingPayloads.has(rootHexUnresolvableRecent)).toBe(true);
+      expect(pendingPayloads.size).toBe(3);
+
+      expect(pendingBlocks.has(blockBelowRootHex)).toBe(false);
+      expect(pendingBlocks.has(rootOnlyStaleHex)).toBe(false);
+      expect(pendingBlocks.has(blockAtFinalizedRootHex)).toBe(true);
+      expect(pendingBlocks.has(rootOnlyRecentHex)).toBe(true);
+      expect(pendingBlocks.size).toBe(2);
+    });
+
+    it("upgrades a slot-less pending payload once a trusted slot becomes available", async () => {
+      const peerA = await getRandPeerIdStr();
+      const peerB = await getRandPeerIdStr();
+      setupPayloadSyncTest({});
+
+      const svc = service as unknown as {
+        addByPayloadRootHex: (rootHex: string, peerIdStr?: PeerIdStr, slot?: number) => boolean;
+        pendingPayloads: Map<string, PayloadSyncCacheItem>;
+      };
+      const rootHex = toRootHex(Buffer.alloc(32, 0xc1));
+
+      // first queued slot-less (e.g. via onUnknownEnvelopeBlockRoot when no trusted slot resolved yet)
+      expect(svc.addByPayloadRootHex(rootHex, peerA)).toBe(true);
+      expect((svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex).slot).toBeUndefined();
+
+      // re-queued with a trusted slot (e.g. via the parentPayload path) -> slot is filled in, peers merged
+      expect(svc.addByPayloadRootHex(rootHex, peerB, 42)).toBe(false);
+      const upgraded = svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex;
+      expect(upgraded.slot).toBe(42);
+      expect(upgraded.peerIdStrings.has(peerA)).toBe(true);
+      expect(upgraded.peerIdStrings.has(peerB)).toBe(true);
+
+      // a later, different slot must NOT overwrite an already-defined slot
+      svc.addByPayloadRootHex(rootHex, undefined, 99);
+      expect((svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex).slot).toBe(42);
+    });
+
     it("drops a child block when its parent payload hash conflicts with the known parent block", async () => {
       const peer = await getRandPeerIdStr();
 
@@ -1523,7 +4310,8 @@ describe("UnknownBlockSync", () => {
         forkName: ForkName.gloas,
         sampledColumns: [],
         custodyColumns: [],
-        timeCreatedSec: Date.now() / 1000,
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.byRange,
         daOutOfRange: false,
       });
 
@@ -1556,8 +4344,13 @@ describe("UnknownBlockSync", () => {
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
           forkChoice: {
-            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            // Parent payload is revealed/imported (FULL) but no variant matches the child's parentBlockHash.
+            // getMissingBlockDependency defers the drop until the payload lands; only then is the conflict real.
+            hasPayloadHexUnsafe: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
@@ -1580,7 +4373,15 @@ describe("UnknownBlockSync", () => {
       expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
-    it("removes pending descendants after invalid parent payload", async () => {
+    it.each<PayloadErrorType>([
+      {code: PayloadErrorCode.INVALID_SIGNATURE},
+      {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+      {
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "invalid payload",
+      },
+    ])("removes pending descendants and evicts the envelope after invalid parent payload $code", async (errorType) => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
@@ -1609,11 +4410,10 @@ describe("UnknownBlockSync", () => {
       });
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const processExecutionPayload = vi
-        .fn()
-        .mockRejectedValue(new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE}));
+      const processExecutionPayload = vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType));
       const processBlock = vi.fn().mockResolvedValue(undefined);
       const seenPayloadPrune = vi.fn();
+      const seenPayloadRemoveInvalid = vi.fn();
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processExecutionPayload,
@@ -1621,7 +4421,11 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: seenPayloadPrune,
+            removeInvalid: seenPayloadRemoveInvalid,
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1649,6 +4453,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
       expect(seenPayloadPrune).not.toHaveBeenCalled();
+      expect(seenPayloadRemoveInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
 
       emitter.emit(routes.events.EventType.executionPayload, {
         slot: 99,
@@ -1707,10 +4512,14 @@ describe("UnknownBlockSync", () => {
       custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
       genesisTime: 0,
       metrics: null,
+      pubkeyCache,
       processBlock,
       forkChoice: {
         getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         hasBlockHex: vi.fn().mockImplementation((rootHex: string) => rootHex === parentRootHex),
+        getBlockHexDefaultStatus: vi
+          .fn()
+          .mockImplementation((rootHex: string) => (rootHex === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
         getBlockHexAndBlockHash: vi
           .fn()
           .mockImplementation((rootHex: string, blockHashHex: string) =>
@@ -1721,9 +4530,13 @@ describe("UnknownBlockSync", () => {
       seenPayloadEnvelopeInputCache: {
         add: vi.fn(),
         get: vi.fn(),
-        prune: vi.fn(),
+        getOrReload: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-      seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
+      seenBlockInputCache: {
+        prune: vi.fn(),
+        isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+      } as unknown as SeenBlockInput,
       seenBlockProposers: {
         isKnown: vi.fn().mockReturnValue(false),
       } as unknown as SeenBlockProposers,
@@ -1854,6 +4667,27 @@ describe("UnknownBlockPeerBalancer", async () => {
     const peer = peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set());
     expect(peer?.peerId).toBe(peer0.peerId);
     expect(peerBalancer.getNextRateLimitRetryAt(new Set([0]), new Set())).toBeNull();
+  });
+
+  it("stops picking a peer before it exceeds the by-root quota peers enforce", () => {
+    vi.useFakeTimers();
+    const now = 10_000;
+    vi.setSystemTime(now);
+
+    peers[0].custodyColumns = [0];
+    peers[1].custodyColumns = [1];
+    peers[2].custodyColumns = [1];
+    peers[3].custodyColumns = [1];
+
+    for (let i = 0; i < 64; i++) {
+      expect(peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set())?.peerId).toBe(peer0.peerId);
+      peerBalancer.onRequestCompleted(peer0.peerId);
+    }
+    expect(peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set())).toBeNull();
+    expect(peerBalancer.getNextRateLimitRetryAt(new Set([0]), new Set())).toBe(now + 10_000);
+
+    vi.setSystemTime(now + 10_000);
+    expect(peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set())?.peerId).toBe(peer0.peerId);
   });
 
   it("reschedules around the earliest tracked rate limit", () => {

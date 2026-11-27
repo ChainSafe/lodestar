@@ -6,6 +6,7 @@ export type ExecutionBuilderArgs = {
   builder: boolean;
   "builder.url"?: string;
   "builder.timeout"?: number;
+  "builder.bidDeadline"?: number;
   "builder.faultInspectionWindow"?: number;
   "builder.allowedFaults"?: number;
 };
@@ -20,10 +21,16 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
     );
   }
 
+  const bidDeadline = args["builder.bidDeadline"];
+  if (bidDeadline !== undefined && (!Number.isInteger(bidDeadline) || bidDeadline <= 0)) {
+    throw new YargsError("builder.bidDeadline must be a positive integer");
+  }
+
   return {
     enabled: args.builder,
     url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
     timeout: args["builder.timeout"],
+    bidDeadline,
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
   };
@@ -31,7 +38,8 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
 
 export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
-    description: "Enable external builder",
+    description:
+      "Enable external builder. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     type: "boolean",
     default: defaultExecutionBuilderHttpOpts.enabled,
     group: "builder",
@@ -39,7 +47,8 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.url": {
     alias: ["builder.urls"],
-    description: "Url hosting the builder API",
+    description:
+      "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     defaultDescription: defaultExecutionBuilderHttpOpts.url,
     type: "string",
     group: "builder",
@@ -52,17 +61,25 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
     group: "builder",
   },
 
+  "builder.bidDeadline": {
+    description:
+      "Time in milliseconds builders are given to provide a bid once block production starts. Advertised to builder API endpoints via the `X-Timeout-Ms` header and applied to bids received via p2p. Post-Gloas only",
+    type: "number",
+    defaultDescription: String(defaultExecutionBuilderHttpOpts.bidDeadline),
+    group: "builder",
+  },
+
   "builder.faultInspectionWindow": {
     type: "number",
     description:
-      "Window to inspect missed slots (pre-gloas) or unrevealed payloads (post-gloas) for enabling/disabling builder circuit breaker",
+      "Window used to inspect missed slots (pre-gloas) or calculate the canonical EMPTY block rate (post-gloas) for enabling/disabling the builder circuit breaker",
     group: "builder",
   },
 
   "builder.allowedFaults": {
     type: "number",
     description:
-      "Number of missed slots (pre-gloas) or unrevealed payloads (post-gloas) allowed in the `faultInspectionWindow` for builder circuit",
+      "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of canonical EMPTY blocks, defined as `allowedFaults` out of `faultInspectionWindow` and applied to canonical blocks in the window",
     group: "builder",
   },
 };

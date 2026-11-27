@@ -1,7 +1,7 @@
 import {BranchNode, LeafNode, Node, zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {progressiveSubtreeFillToContents} from "@chainsafe/ssz";
 
-// TODO: move these utils to @chainsafe/ssz (progressive.ts, next to progressiveSubtreeFillToContents)
+// TODO: move these utils to @chainsafe/ssz, see https://github.com/ChainSafe/ssz/issues/542
 
 /** Root node (chunks + length mix-in) of a zero-filled ProgressiveListBasicType of `length` items */
 export function zeroProgressiveListBasicRootNode(itemsPerChunk: number, length: number): Node {
@@ -13,6 +13,14 @@ export function zeroProgressiveListBasicRootNode(itemsPerChunk: number, length: 
     numSubtrees++;
   }
   return new BranchNode(zeroProgressiveNode(numSubtrees), LeafNode.fromUint32(length));
+}
+
+/**
+ * Check if an array-type ViewDU (ListBasic, ListComposite or their progressive equivalents) has its
+ * internal nodes cache populated. The flag is a private attribute maintained by all of these classes.
+ */
+export function isViewDUNodesPopulated(view: unknown): boolean {
+  return (view as {nodesPopulated?: boolean}).nodesPopulated === true;
 }
 
 /**

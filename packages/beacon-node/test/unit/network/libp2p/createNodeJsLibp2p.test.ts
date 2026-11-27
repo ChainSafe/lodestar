@@ -91,4 +91,40 @@ describe("network / libp2p / createNodeJsLibp2p", () => {
     );
     expect(createLibp2pMock).toHaveBeenCalledOnce();
   });
+
+  it("should sort QUIC addresses before TCP when QUIC is enabled", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+
+    await createNodeJsLibp2p(
+      privateKey,
+      {
+        tcp: true,
+        quic: true,
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1", "/ip4/127.0.0.1/tcp/0"],
+      },
+      {disablePeerDiscovery: true}
+    );
+
+    expect(createLibp2pMock).toHaveBeenCalledOnce();
+    const [init] = createLibp2pMock.mock.calls[0] as unknown as [{connectionManager: {addressSorter?: unknown}}];
+    expect(init.connectionManager.addressSorter).toBeTypeOf("function");
+  });
+
+  it("should keep libp2p's default address order when QUIC is disabled", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+
+    await createNodeJsLibp2p(
+      privateKey,
+      {
+        tcp: true,
+        quic: false,
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+      },
+      {disablePeerDiscovery: true}
+    );
+
+    expect(createLibp2pMock).toHaveBeenCalledOnce();
+    const [init] = createLibp2pMock.mock.calls[0] as unknown as [{connectionManager: {addressSorter?: unknown}}];
+    expect(init.connectionManager.addressSorter).toBeUndefined();
+  });
 });

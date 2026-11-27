@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BUILDER_INDEX_FLAG,
@@ -23,8 +22,10 @@ import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {createSingleSignatureSetFromComponents, verifySignatureSet} from "./signatureSets.js";
 import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
+import {ETH_TO_GWEI} from "./weakSubjectivity.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -87,15 +88,19 @@ export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): 
  * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
  */
 export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
-  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+  return Number(getExpectedGasLimitBigint(BigInt(parentGasLimit), BigInt(targetGasLimit)));
+}
+
+export function getExpectedGasLimitBigint(parentGasLimit: bigint, targetGasLimit: bigint): bigint {
+  const maxGasLimitDifference = (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
 
   if (targetGasLimit > parentGasLimit) {
     const gasDiff = targetGasLimit - parentGasLimit;
-    return parentGasLimit + Math.min(gasDiff, maxGasLimitDifference);
+    return parentGasLimit + (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
   }
 
   const gasDiff = parentGasLimit - targetGasLimit;
-  return parentGasLimit - Math.min(gasDiff, maxGasLimitDifference);
+  return parentGasLimit - (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
 }
 
 /**
@@ -104,8 +109,8 @@ export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: numb
  * adjustment step of the parent, otherwise it must hit the clamped boundary.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
  */
-export function isGasLimitTargetCompatible(parentGasLimit: number, gasLimit: number, targetGasLimit: number): boolean {
-  return gasLimit === getExpectedGasLimit(parentGasLimit, targetGasLimit);
+export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: bigint, targetGasLimit: bigint): boolean {
+  return gasLimit === getExpectedGasLimitBigint(parentGasLimit, targetGasLimit);
 }
 
 /**
@@ -158,6 +163,16 @@ export function canBuilderCoverBid(
 }
 
 /**
+ * Return the number of bids the builder may submit for each slot and parent.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/gloas/p2p-interface.md#new-get_builder_bid_limit
+ */
+export function getBuilderBidLimit(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): number {
+  const builder = state.builders.getReadonly(builderIndex);
+  const pendingBalance = getPendingBalanceToWithdrawForBuilder(state, builderIndex);
+  return Math.floor(Math.max(builder.balance - pendingBalance, 0) / ETH_TO_GWEI);
+}
+
+/**
  * Initiate a builder exit by setting their withdrawable epoch.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-initiate_builder_exit
  */
@@ -172,21 +187,6 @@ export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex:
   // Set builder exit epoch
   const currentEpoch = computeEpochAtSlot(state.slot);
   builder.withdrawableEpoch = currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
-}
-
-/**
- * Find the index of a builder by their public key.
- * Returns null if not found.
- *
- * May consider builder pubkey cache if performance becomes an issue.
- */
-export function findBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: Uint8Array): BuilderIndex | null {
-  for (let i = 0; i < state.builders.length; i++) {
-    if (byteArrayEquals(state.builders.getReadonly(i).pubkey, pubkey)) {
-      return i;
-    }
-  }
-  return null;
 }
 
 /**
@@ -216,6 +216,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[]
         state,
         epoch,
         shuffling.committees,
+        shuffling.shuffling,
         state.epochCtx.effectiveBalanceIncrements
       )
     );
@@ -244,12 +245,11 @@ export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
 }
 
 /**
- * Add a new builder to the builders registry. Reuses slots from exited and fully withdrawn
- * builders when available, otherwise appends.
+ * Append a new builder to the registry without scanning for a reusable slot.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-add_builder_to_registry
+ * This is only safe to be used at the gloas fork transition.
  */
-export function addBuilderToRegistry(
+export function appendBuilderToRegistry(
   state: CachedBeaconStateGloas,
   pubkey: Uint8Array,
   version: number,
@@ -257,19 +257,21 @@ export function addBuilderToRegistry(
   amount: number,
   slot: number
 ): void {
-  const currentEpoch = computeEpochAtSlot(state.slot);
   const depositEpoch = computeEpochAtSlot(slot);
+  state.builders.push(createBuilderView(pubkey, version, executionAddress, amount, depositEpoch));
+}
 
-  let builderIndex = state.builders.length;
-  for (let i = 0; i < state.builders.length; i++) {
-    const builder = state.builders.getReadonly(i);
-    if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
-      builderIndex = i;
-      break;
-    }
-  }
-
-  const newBuilder = ssz.gloas.Builder.toViewDU({
+/**
+ * Build a Builder view from builder fields.
+ */
+export function createBuilderView(
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  depositEpoch: Epoch
+) {
+  return ssz.gloas.Builder.toViewDU({
     pubkey,
     version,
     executionAddress,
@@ -277,12 +279,6 @@ export function addBuilderToRegistry(
     depositEpoch,
     withdrawableEpoch: FAR_FUTURE_EPOCH,
   });
-
-  if (builderIndex < state.builders.length) {
-    state.builders.set(builderIndex, newBuilder);
-  } else {
-    state.builders.push(newBuilder);
-  }
 }
 
 /**
@@ -304,9 +300,7 @@ export function isValidBuilderDepositSignature(
   const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    const publicKey = PublicKey.fromBytes(pubkey, true);
-    const sig = Signature.fromBytes(signature, true);
-    return verify(signingRoot, publicKey, sig);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signature));
   } catch (_e) {
     return false;
   }

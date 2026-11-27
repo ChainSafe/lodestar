@@ -82,7 +82,9 @@ describe("ResResp", () => {
 
     it("should apply new rate limits if same protocol is registered with different limits", async () => {
       // Initial registration of protocol
-      const {quota, quotaTimeMs} = numberToStringProtocol.inboundRateLimits?.byPeer as RateLimiterQuota;
+      const byPeer = numberToStringProtocol.inboundRateLimits?.byPeer;
+      if (byPeer === undefined) throw Error("numberToStringProtocol has no byPeer rate limit");
+      const {quota, quotaTimeMs} = byPeer;
       const initialMsPerToken = quotaTimeMs / quota;
       await reqresp.registerProtocol(numberToStringProtocol);
       const initialLimit = reqresp["rateLimiter"]["rateLimitersPerPeer"].get(

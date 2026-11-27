@@ -1,5 +1,6 @@
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config, config as minimalConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -11,13 +12,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {EpochCacheOpts} from "../cache/epochCache.js";
 import {BeaconStateCache} from "../cache/stateCache.js";
 import {ZERO_HASH} from "../constants/index.js";
-import {
-  BeaconStateAllForks,
-  BeaconStatePhase0,
-  CachedBeaconStateAllForks,
-  createCachedBeaconState,
-  createPubkeyCache,
-} from "../index.js";
+import {BeaconStateAllForks, BeaconStatePhase0, CachedBeaconStateAllForks, createCachedBeaconState} from "../index.js";
 import {newZeroedArray} from "../util/index.js";
 
 /**
@@ -54,7 +49,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
     eth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
-      depositCount: 0,
+      depositCount: 0n,
     },
     eth1DataVotes: [],
     eth1DepositIndex: 0,
@@ -86,10 +81,10 @@ export function generateCachedState(
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
+  pubkeyCache.reset();
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -102,8 +97,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     state,
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
-      // This is a test state, there's no need to have a global shared cache of keys
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
     },
     opts
   );

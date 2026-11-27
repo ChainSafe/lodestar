@@ -4,7 +4,7 @@ title: Fast Confirmation
 
 # Fast Confirmation
 
-Fast Confirmation is an experimental fork-choice extension that lets Lodestar derive a `confirmed` block earlier than FFG can finalize one. It is designed for consumers that care about faster operational safety signals, such as bridges, exchanges, custodians, and settlement systems that want something stronger than "current head" but earlier than finality.
+Fast Confirmation is a fork-choice extension that lets Lodestar derive a `confirmed` block earlier than FFG can finalize one. It is designed for consumers that care about faster operational safety signals, such as bridges, exchanges, custodians, and settlement systems that want something stronger than "current head" but earlier than finality.
 
 ## What it is
 
@@ -75,7 +75,7 @@ The practical policy is:
 
 ## Important caveats
 
-- Fast Confirmation is currently experimental and disabled by default.
+- Fast Confirmation is disabled by default.
 - Enabling it requires the node operator to turn on `--chain.fastConfirmation`.
 - `CONFIRMATION_BYZANTINE_THRESHOLD` defaults to `25` in Lodestar's chain config and can be configured with `--params.CONFIRMATION_BYZANTINE_THRESHOLD` for custom deployments.
 - In simple terms, that `25` means Fast Confirmation remains safe under the assumption that up to one quarter of the relevant staked balance could be malicious, adversarial, equivocating, or unhelpful.

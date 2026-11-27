@@ -1,18 +1,22 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
-import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {ExecutionStatusTransition, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   isGloasBlock,
 } from "./interface.js";
 
@@ -31,7 +35,8 @@ const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
  * Proposer boost deltas, back-propagated to the boosted node's ancestors in applyScoreChanges().
  * Reuse the array to avoid memory reallocation and gc, as computeDeltas does for attestation deltas.
  */
-const boostDeltas = new Array<number>();
+const boostDeltas = new Array<bigint>();
+const EFFECTIVE_BALANCE_INCREMENT_BIGINT = BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
 /**
  * popcount(attended AND NOT yes) — explicit False-vote count.
@@ -51,8 +56,14 @@ export function countNoVotes(attended: BitArray, yes: BitArray): number {
   return count;
 }
 
+function majorityVote(attended: BitArray, yes: BitArray, threshold: number): boolean | null {
+  if (bitCount(yes.uint8Array) > threshold) return true;
+  if (countNoVotes(attended, yes) > threshold) return false;
+  return null;
+}
+
 export const DEFAULT_PRUNE_THRESHOLD = 0;
-type ProposerBoost = {root: RootHex; score: number};
+type ProposerBoost = {root: RootHex; score: bigint};
 
 const ZERO_HASH_HEX = toRootHex(Buffer.alloc(32, 0));
 
@@ -86,9 +97,10 @@ export class ProtoArray {
    * Note: undefined array elements indicate that variant doesn't exist for this block
    */
   indices = new Map<RootHex, VariantIndices>();
-  lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
+  /** Root read by shouldExtendPayload(), set even while the boost weight is withheld */
+  private proposerBoostRoot: RootHex | null = null;
 
   /**
    * PTC (Payload Timeliness Committee) votes per block as bitvectors
@@ -112,6 +124,11 @@ export class ProtoArray {
    * when called with the negative parameter value.
    */
   private ptcAttested = new Map<RootHex, BitArray>();
+  /**
+   * Execution engine inclusion list verdict per block, recorded on payload import from heze.
+   * Spec: heze/fork-choice.md#modified-store (payload_inclusion_list_satisfaction)
+   */
+  private payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
 
   constructor({
     pruneThreshold,
@@ -356,6 +373,7 @@ export class ProtoArray {
   applyScoreChanges({
     attestationDeltas,
     proposerBoost,
+    proposerBoostRoot,
     justifiedEpoch,
     justifiedRoot,
     finalizedEpoch,
@@ -364,6 +382,8 @@ export class ProtoArray {
   }: {
     attestationDeltas: number[];
     proposerBoost: ProposerBoost | null;
+    /** Defaults to the boosted root. Pass it explicitly when the boost weight is withheld */
+    proposerBoostRoot?: RootHex | null;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
@@ -379,7 +399,7 @@ export class ProtoArray {
     }
 
     boostDeltas.length = this.nodes.length;
-    boostDeltas.fill(0);
+    boostDeltas.fill(0n);
 
     if (
       justifiedEpoch !== this.justifiedEpoch ||
@@ -416,17 +436,20 @@ export class ProtoArray {
       // the boost neutral with respect to EMPTY vs FULL selection.
       const isBoostVariant = isGloasBlock(node) ? node.payloadStatus === PayloadStatus.PENDING : true; // pre-Gloas has only FULL, always boost
       const currentBoost =
-        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0;
+        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0n;
       const previousBoost =
         this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot && isBoostVariant
           ? this.previousProposerBoost.score
-          : 0;
+          : 0n;
 
       // If this node's execution status has been marked invalid, then the weight of the node
       // needs to be taken out of consideration after which the node weight will become 0
       // for subsequent iterations of applyScoreChanges
       const isInvalid = node.executionStatus === ExecutionStatus.Invalid;
-      const attestationDelta = isInvalid ? -node.attestationScore : attestationDeltas[nodeIndex];
+      const attestationDelta = isInvalid
+        ? -Number(node.attestationScore / EFFECTIVE_BALANCE_INCREMENT_BIGINT)
+        : attestationDeltas[nodeIndex];
+      const attestationDeltaGwei = BigInt(attestationDelta) * EFFECTIVE_BALANCE_INCREMENT_BIGINT;
       const boostDelta = isInvalid
         ? // old boost = weight - attestationScore
           -(node.weight - node.attestationScore)
@@ -434,8 +457,8 @@ export class ProtoArray {
 
       // Apply the deltas to the node. Their sum is the node's total delta, so weight is unaffected
       // by tracking the two scores apart.
-      node.attestationScore += attestationDelta;
-      node.weight += attestationDelta + boostDelta;
+      node.attestationScore += attestationDeltaGwei;
+      node.weight += attestationDeltaGwei + boostDelta;
 
       // Update the parent deltas (if any)
       const parentIndex = node.parent;
@@ -459,7 +482,9 @@ export class ProtoArray {
     // We _must_ perform these functions separate from the weight-updating loop above to ensure
     // that we have a fully coherent set of weights before updating parent
     // best-child/descendant.
-    const proposerBoostRoot = proposerBoost?.root ?? null;
+    // should_extend_payload reads store.proposer_boost_root even when should_apply_proposer_boost
+    // withholds the boost weight, so the tiebreak root is tracked apart from the applied boost
+    this.proposerBoostRoot = proposerBoostRoot ?? proposerBoost?.root ?? null;
     for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
@@ -472,7 +497,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoostRoot);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, this.proposerBoostRoot);
       }
     }
     // Update the previous proposer boost
@@ -527,8 +552,8 @@ export class ProtoArray {
         ...block,
         parent: parentIndex, // Points to parent's EMPTY/FULL or FULL (for transition)
         payloadStatus: PayloadStatus.PENDING,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -541,8 +566,8 @@ export class ProtoArray {
         ...block,
         parent: pendingIndex, // Points to own PENDING
         payloadStatus: PayloadStatus.EMPTY,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -577,8 +602,8 @@ export class ProtoArray {
         ...block,
         parent: this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL),
         payloadStatus: PayloadStatus.FULL,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -663,8 +688,8 @@ export class ProtoArray {
       ...pendingNode,
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
       payloadStatus: PayloadStatus.FULL,
-      weight: 0,
-      attestationScore: 0,
+      weight: 0n,
+      attestationScore: 0n,
       bestChild: undefined,
       bestDescendant: undefined,
       executionStatus,
@@ -686,30 +711,52 @@ export class ProtoArray {
       this.propagateValidExecutionStatusByIndex(pendingIndex);
     }
 
-    // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
-    this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
+    // A zero-weight leaf only changes best child and descendant links on its path to the root
+    let childIndex = fullIndex;
+    let parentIndex: number | undefined = pendingIndex;
+    while (parentIndex !== undefined) {
+      this.maybeUpdateBestChildAndDescendant(parentIndex, childIndex, currentSlot, proposerBoostRoot);
+      childIndex = parentIndex;
+      parentIndex = this.nodes[childIndex].parent;
+    }
   }
 
-  /**
-   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
-   * payload (FULL variant exists). Used by the builder circuit breaker.
-   */
-  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
-    let blocksPresent = 0;
-    let payloadsRevealed = 0;
-    // Full scan, nodes are in import order not slot order (an old block can be imported after newer
-    // ones during sync or reorg resolution), so we cannot stop early on an out-of-window slot
-    for (const node of this.nodes) {
-      // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
-      if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
-        continue;
+  /** Count blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */
+  getCanonicalPayloadCounts(
+    fromSlot: Slot,
+    toSlot: Slot,
+    headRoot: RootHex,
+    headPayloadStatus: PayloadStatus
+  ): {full: number; empty: number} {
+    let full = 0;
+    let empty = 0;
+
+    // Walk the canonical chain newest-first from the head, following ancestors via `getParentNodeIndex`.
+    // Ancestors are strictly slot-descending, so we stop as soon as a node falls below `fromSlot`
+    // instead of materializing the whole chain back to the anchor as `getAllAncestorNodes` does.
+    // This keeps the scan O(window) rather than O(chain-to-anchor), relevant under prolonged non-finality.
+    const headIndex = this.getNodeIndexByRootAndStatus(headRoot, headPayloadStatus);
+    let node = headIndex !== undefined ? this.nodes[headIndex] : undefined;
+
+    while (node !== undefined && node.slot >= fromSlot) {
+      if (
+        node.slot !== GENESIS_SLOT &&
+        node.slot <= toSlot &&
+        isGloasBlock(node) &&
+        node.payloadStatus !== PayloadStatus.PENDING
+      ) {
+        if (node.payloadStatus === PayloadStatus.FULL) {
+          full++;
+        } else {
+          empty++;
+        }
       }
-      blocksPresent++;
-      if (this.hasPayload(node.blockRoot)) {
-        payloadsRevealed++;
-      }
+
+      const parentIndex = this.getParentNodeIndex(node);
+      node = parentIndex === undefined ? undefined : this.nodes[parentIndex];
     }
-    return {blocksPresent, payloadsRevealed};
+
+    return {full, empty};
   }
 
   /**
@@ -778,6 +825,23 @@ export class ProtoArray {
       attesterCount: bitCount(attended.uint8Array),
       payloadPresentCount: bitCount(timelinessVotes.uint8Array),
       dataAvailableCount: bitCount(daVotes.uint8Array),
+    };
+  }
+
+  /**
+   * PTC majority per vote field from the raw tallies, regardless of whether the payload is locally
+   * available. Returns `null` for pre-Gloas (or pruned) roots, which have no vote maps.
+   */
+  getPtcQuorum(blockRoot: RootHex): PtcQuorum | null {
+    const attended = this.ptcAttested.get(blockRoot);
+    const timelinessVotes = this.payloadTimelinessVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
+    if (attended === undefined || timelinessVotes === undefined || daVotes === undefined) {
+      return null;
+    }
+    return {
+      payloadPresent: majorityVote(attended, timelinessVotes, PAYLOAD_TIMELY_THRESHOLD),
+      blobDataAvailable: majorityVote(attended, daVotes, DATA_AVAILABILITY_TIMELY_THRESHOLD),
     };
   }
 
@@ -855,7 +919,7 @@ export class ProtoArray {
   }
 
   /**
-   * Spec: should_build_on_full(store, head)
+   * Spec: should_build_on_full(store, head, slot)
    *
    * The proposer is forced to build on the EMPTY variant (effectively reorging)
    * when the PTC majority voted that the blob data is not available or that the
@@ -887,6 +951,27 @@ export class ProtoArray {
     return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
   }
 
+  /** Spec: heze/fork-choice.md#new-record_payload_inclusion_list_satisfaction. Returns whether the verdict changed */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const previous = this.payloadInclusionListSatisfaction.get(blockRoot);
+    this.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+    return previous !== satisfied;
+  }
+
+  /**
+   * Spec: heze/fork-choice.md#new-is_payload_inclusion_list_satisfied
+   *
+   * False until the payload is delivered. A delivered payload without a verdict is pre-heze, where
+   * no inclusion list constraints apply.
+   */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.hasPayload(blockRoot) && this.payloadInclusionListSatisfaction.get(blockRoot) !== false;
+  }
+
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.payloadInclusionListSatisfaction.get(blockRoot) ?? null;
+  }
+
   /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
@@ -902,6 +987,10 @@ export class ProtoArray {
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    if (this.payloadInclusionListSatisfaction.get(blockRoot) === false) {
       return false;
     }
 
@@ -938,12 +1027,20 @@ export class ProtoArray {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any descendant branch
-   * if invalidate till hash provided. If consensus fails, this will invalidate entire
-   * forkChoice which will throw on any call to findHead
+   * Apply an execution engine verdict with a latest valid hash (LVH) to the tree. VALID flips Syncing nodes up to the
+   * LVH node. INVALID invalidates the node identified by `invalidateFromBlockRoot/Hash` and its ancestors up to
+   * the LVH node (exclusive), then every descendant. Returns whether any status changed, and if not, why.
+   *
+   * A verdict never contradicts what fork choice already holds: a node the engine already resolved is never flipped
+   * and an INVALID never crosses the justified node. The LVH is unusable when it is null, not an ancestor of the from
+   * node, or the walk to it meets such a node.
+   *
+   * An unusable LVH leaves only the claim about the judged payload. With `LVHInvalidJudged.FromBlock` that is the from
+   * node: it and the nodes that inherit its payload (gloas PENDING and EMPTY variants) are invalidated, nothing above
+   * them. With `LVHInvalidJudged.ChildPayload` the judged payload is not in the tree and the from node is its parent,
+   * so the verdict is dropped.
    */
-  // TODO GLOAS: Review usage of this post-gloas
-  validateLatestHash(execResponse: LVHExecResponse, currentSlot: Slot): void {
+  validateLatestHash(execResponse: LVHExecResponse, currentSlot: Slot): LVHVerdictResult {
     // Look reverse because its highly likely node with latestValidExecHash is towards the
     // the leaves of the forkchoice
     //
@@ -954,75 +1051,140 @@ export class ProtoArray {
     // https://github.com/ChainSafe/lodestar/pull/4182#discussion_r914770167
 
     if (execResponse.executionStatus === ExecutionStatus.Valid) {
-      const {latestValidExecHash} = execResponse;
+      const {latestValidExecHash, blockRoot} = execResponse;
       // We use -1 for denoting not found
       let latestValidHashIndex = -1;
 
-      for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
-        if (this.nodes[nodeIndex].executionPayloadBlockHash === latestValidExecHash) {
-          latestValidHashIndex = nodeIndex;
-          // We found the block corresponding to latestValidHashIndex, exit the loop
-          break;
+      if (blockRoot !== undefined) {
+        latestValidHashIndex = this.getNodeIndexByRootAndBlockHash(blockRoot, latestValidExecHash) ?? -1;
+      } else {
+        for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
+          if (this.nodes[nodeIndex].executionPayloadBlockHash === latestValidExecHash) {
+            latestValidHashIndex = nodeIndex;
+            // We found the block corresponding to latestValidHashIndex, exit the loop
+            break;
+          }
         }
       }
 
       // We are trying to be as forgiving as possible here because ideally latestValidHashIndex
       // should be found in the forkchoice
-      if (latestValidHashIndex >= 0) {
-        this.propagateValidExecutionStatusByIndex(latestValidHashIndex);
+      if (latestValidHashIndex < 0) {
+        return {applied: false, reason: LVHNotAppliedReason.UnknownLVH};
       }
-    } else {
-      // In case of invalidation, ideally:
-      //  i) Find the invalid payload
-      //  ii) Obtain a chain [LVH.child, LVH.child.child, ....., invalid_payload]
-      //  iii) Obtain a chain [Last_known_valid_node,  ...., LVH]
-      //
-      // Mark chain iii) as Valid if LVH is non null but right now LVH can be non null without
-      //  gurranteing chain iii) to be valid: for e.g. in following scenario LVH can be returned
-      //  as any of SYNCING: SYNCING, SYNCING, SYNCING, INVALID (due to simple check)/
-      //  So we currently ignore this chain and hope eventually it gets resolved
-      //
-      // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
-      // if its in fcU.
-      //
-      const {invalidateFromParentBlockRoot, invalidateFromParentBlockHash, latestValidExecHash} = execResponse;
-      const invalidateFromParentIndex = this.getNodeIndexByRootAndBlockHash(
-        invalidateFromParentBlockRoot,
-        invalidateFromParentBlockHash
-      );
-      if (invalidateFromParentIndex === undefined) {
-        throw Error(
-          `Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} invalidateFromParentBlockHash=${invalidateFromParentBlockHash} in forkChoice`
-        );
+      const {executionStatus} = this.nodes[latestValidHashIndex];
+      if (executionStatus === ExecutionStatus.Valid || executionStatus === ExecutionStatus.PreMerge) {
+        return {applied: false, reason: LVHNotAppliedReason.AlreadyApplied};
       }
-      const latestValidHashIndex =
-        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromParentIndex) : null;
-      if (latestValidHashIndex === null) {
-        /**
-         * The LVH (latest valid hash) is null or not found.
-         *
-         * The spec gives an allowance for the EL being able to return a nullish LVH if it could not
-         * "determine" one. There are two interpretations:
-         *
-         * - "the LVH is unknown" - simply throw and move on. We can't determine which chain to invalidate
-         *   since we don't know which ancestor is valid.
-         *
-         * - "the LVH doesn't exist" - this means that the entire ancestor chain is invalid, and should
-         *   be marked as such.
-         *
-         * The more robust approach is to treat nullish LVH as "the LVH is unknown" rather than
-         * "the LVH doesn't exist". The alternative means that we will poison a valid chain when the
-         * EL is lazy (or buggy) with its LVH response.
-         */
-        throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
+      // The walk up flips every Syncing ancestor, it must not contradict an invalidated one
+      let nodeIndex: number | undefined = latestValidHashIndex;
+      while (nodeIndex !== undefined) {
+        const node: ProtoNode = this.nodes[nodeIndex];
+        if (node.executionStatus === ExecutionStatus.Valid || node.executionStatus === ExecutionStatus.PreMerge) {
+          break;
+        }
+        if (node.executionStatus === ExecutionStatus.Invalid) {
+          return {applied: false, reason: LVHNotAppliedReason.Contradiction};
+        }
+        nodeIndex = node.parent;
       }
-
-      this.propagateInValidExecutionStatusByIndex(invalidateFromParentIndex, latestValidHashIndex, currentSlot);
+      this.propagateValidExecutionStatusByIndex(latestValidHashIndex);
+      return {applied: true};
     }
+
+    // In case of invalidation, ideally:
+    //  i) Find the invalid payload
+    //  ii) Obtain a chain [LVH.child, LVH.child.child, ....., invalid_payload]
+    //  iii) Obtain a chain [Last_known_valid_node,  ...., LVH]
+    //
+    // Mark chain iii) as Valid if LVH is non null but right now LVH can be non null without
+    //  gurranteing chain iii) to be valid: for e.g. in following scenario LVH can be returned
+    //  as any of SYNCING: SYNCING, SYNCING, SYNCING, INVALID (due to simple check)/
+    //  So we currently ignore this chain and hope eventually it gets resolved
+    //
+    // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
+    // if its in fcU.
+    //
+    const {invalidateFromBlockRoot, invalidateFromBlockHash, latestValidExecHash, judged} = execResponse;
+    const invalidateFromIndex = this.getNodeIndexByRootAndBlockHash(invalidateFromBlockRoot, invalidateFromBlockHash);
+    if (invalidateFromIndex === undefined) {
+      throw Error(
+        `Unable to find invalidateFromBlockRoot=${invalidateFromBlockRoot} invalidateFromBlockHash=${invalidateFromBlockHash} in forkChoice`
+      );
+    }
+    const fromStatus = this.nodes[invalidateFromIndex].executionStatus;
+    if (fromStatus !== ExecutionStatus.Syncing) {
+      return {
+        applied: false,
+        reason:
+          fromStatus === ExecutionStatus.Invalid
+            ? LVHNotAppliedReason.AlreadyApplied
+            : LVHNotAppliedReason.Contradiction,
+      };
+    }
+
+    let latestValidHashIndex =
+      latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromIndex) : null;
+    if (latestValidHashIndex === null) {
+      if (judged === LVHInvalidJudged.ChildPayload) {
+        return {applied: false, reason: LVHNotAppliedReason.UnusableLVH};
+      }
+      latestValidHashIndex = this.getParentPayloadIndex(invalidateFromIndex);
+    }
+
+    // Never invalidate the justified block, the EMPTY variant sharing its chain, or anything at or below it in
+    // the tree. The justified block's own payload (FULL variant) is not part of the checkpoint
+    const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot) ?? -1;
+    let nodeIndex: number | undefined = invalidateFromIndex;
+    while (nodeIndex !== undefined && nodeIndex > latestValidHashIndex) {
+      const node: ProtoNode = this.nodes[nodeIndex];
+      const conflict = node.executionStatus !== ExecutionStatus.Syncing;
+      const justified =
+        nodeIndex <= justifiedIndex ||
+        (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
+      if (conflict || justified) {
+        if (judged === LVHInvalidJudged.FromBlock) {
+          // The LVH is unusable: invalidate only the judged payload, but never cross this node
+          latestValidHashIndex = Math.max(nodeIndex, this.getParentPayloadIndex(invalidateFromIndex));
+        } else if (conflict) {
+          return {applied: false, reason: LVHNotAppliedReason.Contradiction};
+        } else {
+          // The LVH is below the justified node, it still covers everything above it
+          latestValidHashIndex = nodeIndex;
+        }
+        break;
+      }
+      nodeIndex = node.parent;
+    }
+
+    if (invalidateFromIndex <= latestValidHashIndex) {
+      return {applied: false, reason: LVHNotAppliedReason.NothingToInvalidate};
+    }
+
+    this.propagateInValidExecutionStatusByIndex(invalidateFromIndex, latestValidHashIndex, currentSlot);
+    return {applied: true};
+  }
+
+  /**
+   * Index of the nearest ancestor carrying a different payload than `fromIndex`, i.e. the node holding its parent
+   * payload. Pre-gloas this is the parent of `fromIndex`. For a gloas EMPTY or PENDING node it skips past the FULL
+   * node that owns the payload. -1 when the chain reaches the root.
+   */
+  private getParentPayloadIndex(fromIndex: number): number {
+    const payloadBlockHash = this.nodes[fromIndex].executionPayloadBlockHash;
+    let nodeIndex = fromIndex;
+    let parentIndex = this.nodes[nodeIndex].parent;
+    while (parentIndex !== undefined && this.nodes[parentIndex].executionPayloadBlockHash === payloadBlockHash) {
+      nodeIndex = parentIndex;
+      parentIndex = this.nodes[nodeIndex].parent;
+    }
+    return parentIndex ?? -1;
   }
 
   private propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
     let nodeIndex: number | undefined = validNodeIndex;
+    // Payloads that transitioned to VALID, their gloas dependents are validated below
+    const validatedPayloadHashes = new Set<RootHex>();
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
@@ -1030,7 +1192,39 @@ export class ProtoArray {
         break;
       }
       this.validateNodeByIndex(nodeIndex);
+      if (node.payloadStatus === PayloadStatus.FULL && node.executionPayloadBlockHash !== null) {
+        validatedPayloadHashes.add(node.executionPayloadBlockHash);
+      }
       nodeIndex = node.parent;
+    }
+
+    if (validatedPayloadHashes.size > 0) {
+      this.validatePayloadDependents(validatedPayloadHashes);
+    }
+  }
+
+  /**
+   * A node's execution status is that of the payload in its `executionPayloadBlockHash`: its own for FULL, the
+   * inherited parent payload for gloas PENDING and EMPTY. Once that payload is VALID every node carrying it is, not
+   * only the chain the validation walked up (e.g. siblings, blocks on a sibling's EMPTY variant, or an equivocating
+   * block with the same payload). A node is only flipped below a Valid parent, otherwise a later INVALID for the
+   * parent would reach it. A parent has a lower index than its children, so the scan updates it first.
+   */
+  private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
+    for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
+      const node = this.nodes[nodeIndex];
+      const parentStatus = node.parent !== undefined ? this.nodes[node.parent].executionStatus : undefined;
+      if (
+        node.executionStatus === ExecutionStatus.Syncing &&
+        node.executionPayloadBlockHash !== null &&
+        payloadHashes.has(node.executionPayloadBlockHash) &&
+        (parentStatus === undefined ||
+          parentStatus === ExecutionStatus.Valid ||
+          parentStatus === ExecutionStatus.PreMerge)
+      ) {
+        // Also flips the sibling EMPTY variant
+        this.validateNodeByIndex(nodeIndex);
+      }
     }
   }
 
@@ -1045,12 +1239,12 @@ export class ProtoArray {
    */
 
   private propagateInValidExecutionStatusByIndex(
-    invalidateFromParentIndex: number,
+    invalidateFromIndex: number,
     latestValidHashIndex: number,
     currentSlot: Slot
   ): void {
-    // Pass 1: mark invalidateFromParentIndex and its parents invalid
-    let invalidateIndex: number | undefined = invalidateFromParentIndex;
+    // Pass 1: mark invalidateFromIndex and its parents invalid
+    let invalidateIndex: number | undefined = invalidateFromIndex;
     while (invalidateIndex !== undefined && invalidateIndex > latestValidHashIndex) {
       const invalidNode = this.invalidateNodeByIndex(invalidateIndex);
       invalidateIndex = invalidNode.parent;
@@ -1072,6 +1266,7 @@ export class ProtoArray {
     this.applyScoreChanges({
       attestationDeltas: Array.from({length: this.nodes.length}, () => 0),
       proposerBoost: this.previousProposerBoost,
+      proposerBoostRoot: this.proposerBoostRoot,
       justifiedEpoch: this.justifiedEpoch,
       justifiedRoot: this.justifiedRoot,
       finalizedEpoch: this.finalizedEpoch,
@@ -1098,28 +1293,19 @@ export class ProtoArray {
   private invalidateNodeByIndex(nodeIndex: number): ProtoNode {
     const invalidNode = this.getNodeFromIndex(nodeIndex);
 
-    // If node to be invalidated is pre-merge or valid,it is a catastrophe,
-    // and indicates consensus failure and a non recoverable damage.
-    //
-    // There is no further processing that can be done.
-    // Just assign error for marking proto-array perma damaged and throw!
+    // validateLatestHash never starts an invalidation that reaches a pre-merge or valid node
     if (
       invalidNode.executionStatus === ExecutionStatus.Valid ||
       invalidNode.executionStatus === ExecutionStatus.PreMerge
     ) {
-      const lvhCode =
-        invalidNode.executionStatus === ExecutionStatus.Valid
-          ? LVHExecErrorCode.ValidToInvalid
-          : LVHExecErrorCode.PreMergeToInvalid;
-
-      this.lvhError = {
-        lvhCode,
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition:
+          invalidNode.executionStatus === ExecutionStatus.Valid
+            ? ExecutionStatusTransition.ValidToInvalid
+            : ExecutionStatusTransition.PreMergeToInvalid,
         blockRoot: invalidNode.blockRoot,
         execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
-      };
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        ...this.lvhError,
       });
     }
 
@@ -1140,14 +1326,11 @@ export class ProtoArray {
   private validateNodeByIndex(nodeIndex: number): ProtoNode {
     const validNode = this.getNodeFromIndex(nodeIndex);
     if (validNode.executionStatus === ExecutionStatus.Invalid) {
-      this.lvhError = {
-        lvhCode: LVHExecErrorCode.InvalidToValid,
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition: ExecutionStatusTransition.InvalidToValid,
         blockRoot: validNode.blockRoot,
         execHash: validNode.executionPayloadBlockHash,
-      };
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        ...this.lvhError,
       });
     }
 
@@ -1183,6 +1366,15 @@ export class ProtoArray {
 
     // For Gloas: check if from previous slot
     if (node.slot + 1 !== currentSlot) {
+      // During the block's own slot a payload known to not satisfy the inclusion list
+      // constraints ranks below its EMPTY variant, as it will from the next slot on
+      if (
+        node.slot === currentSlot &&
+        node.payloadStatus === PayloadStatus.FULL &&
+        this.payloadInclusionListSatisfaction.get(node.blockRoot) === false
+      ) {
+        return PayloadStatus.PENDING;
+      }
       return node.payloadStatus;
     }
 
@@ -1204,13 +1396,6 @@ export class ProtoArray {
    * For Gloas, may return PENDING/EMPTY/FULL variants.
    */
   findHead(justifiedRoot: RootHex, currentSlot: Slot): ProtoNode {
-    if (this.lvhError) {
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        ...this.lvhError,
-      });
-    }
-
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
     const justifiedIndex = this.getDefaultNodeIndex(justifiedRoot);
     if (justifiedIndex === undefined) {
@@ -1317,6 +1502,7 @@ export class ProtoArray {
       this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
       this.payloadDataAvailabilityVotes.delete(root);
+      this.payloadInclusionListSatisfaction.delete(root);
     }
 
     // Store nodes prior to finalization
@@ -1480,13 +1666,13 @@ export class ProtoArray {
             childNode.payloadStatus === PayloadStatus.PENDING ||
             childNode.slot + 1 !== currentSlot
               ? childNode.weight
-              : 0;
+              : 0n;
           const bestChildEffectiveWeight =
             !isGloasBlock(bestChildNode) ||
             bestChildNode.payloadStatus === PayloadStatus.PENDING ||
             bestChildNode.slot + 1 !== currentSlot
               ? bestChildNode.weight
-              : 0;
+              : 0n;
 
           if (childEffectiveWeight !== bestChildEffectiveWeight) {
             // Different effective weights, choose the winner by weight
@@ -1581,8 +1767,8 @@ export class ProtoArray {
     return correctJustified && correctFinalized;
   }
 
-  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
-  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+  /** Returns exact Gwei weights for the compliance test boundary. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] {
     // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
     // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
     // that descends from the justified checkpoint block AND is itself viable for head. Iterating
@@ -1591,7 +1777,7 @@ export class ProtoArray {
     const justifiedVariant = this.getDefaultVariant(this.justifiedRoot);
     // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
     // tree, identified by (root, payload_status, weight) — emit one entry per variant.
-    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
+    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] = [];
     for (const node of this.nodes) {
       if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
         continue;
@@ -1608,7 +1794,11 @@ export class ProtoArray {
           continue;
         }
       }
-      heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
+      heads.push({
+        root: node.blockRoot,
+        payloadStatus: node.payloadStatus,
+        weight: node.weight,
+      });
     }
     return heads;
   }
@@ -1981,6 +2171,41 @@ export class ProtoArray {
       return undefined;
     }
     return this.getNodeByIndex(nodeIndex);
+  }
+
+  /**
+   * Return true if a block other than `excludeRoot` at `slot` was proposed by `proposerIndex`.
+   * `should_apply_proposer_boost` only counts PTC-timely blocks (`ptcTimelyOnly`), `is_proposer_equivocation`
+   * counts any known block.
+   *
+   * Iterates unique block roots (via the canonical variant) since `slot`, `proposerIndex` and
+   * `ptcTimeliness` are block-level properties identical across payload-status variants.
+   */
+  hasEquivocatingBlock(
+    proposerIndex: ValidatorIndex,
+    slot: Slot,
+    excludeRoot: RootHex,
+    ptcTimelyOnly: boolean
+  ): boolean {
+    for (const root of this.indices.keys()) {
+      if (root === excludeRoot) {
+        continue;
+      }
+      const nodeIndex = this.getDefaultNodeIndex(root);
+      if (nodeIndex === undefined) {
+        continue;
+      }
+      const node = this.nodes[nodeIndex];
+      if (
+        node !== undefined &&
+        node.slot === slot &&
+        node.proposerIndex === proposerIndex &&
+        (node.ptcTimeliness || !ptcTimelyOnly)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

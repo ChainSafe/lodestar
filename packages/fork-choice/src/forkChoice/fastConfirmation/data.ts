@@ -4,17 +4,18 @@ import {
   FastConfirmationContext,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
-} from "./types.ts";
-import {getBlock, getUnrealizedJustification} from "./utils.ts";
+} from "./types.js";
+import {getBlock, getUnrealizedJustification} from "./utils.js";
 
 export function createFastConfirmationCache(): FastConfirmationCache {
   return {
     blockByRoot: new Map(),
     ancestorRoots: new Map(),
-    committeeBySlot: new Map(),
+    committeeSweepByEndSlot: new Map(),
+    participantsByRange: new Map(),
     isDescendantByRootPair: new Map(),
     voteWeightBySource: new Map(),
-    totalActiveBalanceByKey: new Map(),
+    activeBalancesByKey: new Map(),
     checkpointStateByKey: new Map(),
   };
 }

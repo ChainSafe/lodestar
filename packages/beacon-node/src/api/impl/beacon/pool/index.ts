@@ -17,6 +17,7 @@ import {
   PayloadAttestationError,
   PayloadAttestationErrorCode,
   SyncCommitteeError,
+  SyncCommitteeErrorCode,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
@@ -25,6 +26,7 @@ import {validateApiPayloadAttestationMessage} from "../../../../chain/validation
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
@@ -38,7 +40,7 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations = [...chain.aggregatedAttestationPool.getAll(slot), ...chain.attestationPool.getAll(slot)];
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -47,7 +49,11 @@ export function getBeaconPoolApi({
       );
 
       if (committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+        attestations = attestations.filter((attestation) =>
+          isElectraAttestation(attestation)
+            ? attestation.committeeBits.get(committeeIndex)
+            : committeeIndex === attestation.data.index
+        );
       }
 
       return {data: attestations, meta: {version: fork}};
@@ -99,7 +105,9 @@ export function getBeaconPoolApi({
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
-            if (network.shouldAggregate(subnet, slot)) {
+            try {
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.attestationPool.add(
                 committeeIndex,
                 attestation,
@@ -109,6 +117,36 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              // The pool is a local optimization, failing to insert must not stop us from publishing a
+              // validated attestation, which the route requires us to do. Same handling as the gossip path
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+            }
+
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.apiInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding single attestation to pool",
+                  {
+                    slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
             }
 
             if (isForkPostElectra(fork)) {
@@ -159,20 +197,34 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-      chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
-      await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing);
+      const verifiedDomain = await validateApiProposerSlashing(chain, proposerSlashing);
+      chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      const result = await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+
+      if (result.status === "deferred") {
+        const currentEpoch = chain.clock.currentEpoch;
+        const inserted = chain.deferredVoluntaryExitPool.insert(signedVoluntaryExit, result.validity, currentEpoch);
+        if (!inserted) {
+          throw new ApiError(400, "Deferred voluntary exit pool is full or already contains this validator");
+        }
+        logger.info("Voluntary exit deferred until transient conditions are met", {
+          validatorIndex: signedVoluntaryExit.message.validatorIndex,
+          reason: result.validity,
+        });
+        return;
+      }
+
       chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);
@@ -211,6 +263,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+      const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
 
       await Promise.all(
@@ -226,6 +279,9 @@ export function getBeaconPoolApi({
               beaconBlockRoot
             );
 
+            const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+            metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+
             const insertOutcome = chain.payloadAttestationPool.add(
               payloadAttestationMessage,
               attDataRootHex,
@@ -233,13 +289,15 @@ export function getBeaconPoolApi({
             );
             metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
-            chain.forkChoice.notifyPtcMessages(
-              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              payloadAttestationMessage.data.slot,
-              validatorCommitteeIndices,
-              payloadAttestationMessage.data.payloadPresent,
-              payloadAttestationMessage.data.blobDataAvailable
-            );
+            if (slot === chain.clock.currentSlot) {
+              chain.forkChoice.notifyPtcMessages(
+                toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+                payloadAttestationMessage.data.slot,
+                validatorCommitteeIndices,
+                payloadAttestationMessage.data.payloadPresent,
+                payloadAttestationMessage.data.blobDataAvailable
+              );
+            }
 
             chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
               version: chain.config.getForkName(slot),
@@ -311,7 +369,10 @@ export function getBeaconPoolApi({
             const synCommittee = state.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              return; // Not a sync committee member
+              throw new SyncCommitteeError(GossipAction.REJECT, {
+                code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+                validatorIndex: signature.validatorIndex,
+              });
             }
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.

@@ -9,6 +9,7 @@ import {
   ColumnWithSource,
   CreateFromBidProps,
   CreateFromBlockProps,
+  PayloadEnvelopeInputSource,
   SourceMeta,
 } from "./types.js";
 
@@ -71,6 +72,7 @@ export class PayloadEnvelopeInput {
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
   readonly daOutOfRange: boolean;
+  readonly source: PayloadEnvelopeInputSource;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
 
@@ -95,6 +97,7 @@ export class PayloadEnvelopeInput {
     custodyColumns: ColumnIndex[];
     timeCreatedSec: number;
     daOutOfRange: boolean;
+    source: PayloadEnvelopeInputSource;
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
@@ -106,6 +109,7 @@ export class PayloadEnvelopeInput {
     this.custodyColumns = props.custodyColumns;
     this.timeCreatedSec = props.timeCreatedSec;
     this.daOutOfRange = props.daOutOfRange;
+    this.source = props.source;
     this.payloadEnvelopeDataPromise = createPromise();
     this.allDataPromise = createPromise();
     this.columnsDataPromise = createPromise();
@@ -133,8 +137,9 @@ export class PayloadEnvelopeInput {
       bid,
       sampledColumns: props.sampledColumns,
       custodyColumns: props.custodyColumns,
-      timeCreatedSec: props.timeCreatedSec,
+      timeCreatedSec: props.seenTimestampSec,
       daOutOfRange: props.daOutOfRange,
+      source: props.source,
     });
   }
 
@@ -153,8 +158,9 @@ export class PayloadEnvelopeInput {
       bid: props.bid,
       sampledColumns: props.sampledColumns,
       custodyColumns: props.custodyColumns,
-      timeCreatedSec: props.timeCreatedSec,
+      timeCreatedSec: props.seenTimestampSec,
       daOutOfRange: props.daOutOfRange,
+      source: props.source,
     });
   }
 

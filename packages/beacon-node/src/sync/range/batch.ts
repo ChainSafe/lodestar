@@ -1,10 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {ForkName, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {Epoch, RootHex, SignedBeaconBlock, Slot, gloas, phase0} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {ZERO_HASH} from "../../constants/constants.js";
@@ -13,7 +14,7 @@ import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {DownloadByRangeRequests, ParentPayloadCommitments} from "../utils/downloadByRange.js";
+import {DownloadByRangeRequests, ParentPayload} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -38,11 +39,22 @@ export enum BatchStatus {
   AwaitingValidation = "AwaitingValidation",
 }
 
+/** Identity of one download attempt*/
 export type Attempt = {
   /** The peer that made the attempt */
   peers: PeerIdStr[];
   /** The hash of the blocks of the attempt */
   hash: RootHex;
+};
+
+/**
+ * A failed attempt that has been classified for blame.
+ */
+export type FailedAttempt = Attempt & {
+  /**
+   * True when the failure is evidence the peers served bad data, so they may be downscored..
+   */
+  peerAttributable: boolean;
 };
 
 type TrackedRequest = {
@@ -64,6 +76,7 @@ export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  attempt: Attempt;
 };
 
 export type BatchState =
@@ -99,17 +112,18 @@ export type BatchMetadata = {
   // Per-type outstanding request shapes; only present when that sub-request exists.
   // Format: "startSlot=<n>,count=<n>" (plus ",cols=<indices>" for columns).
   blocksReq?: string;
-  blobsReq?: string;
   columnsReq?: string;
   envelopesReq?: string;
 
   // Retry counters
   downloadAttempts: number;
   processingAttempts: number;
+  executionErrorAttempts: number;
 
   // Cumulative peer attribution for failed attempts (only present when non-empty)
   failedDownloadPeers?: string;
   failedProcessingPeers?: string;
+  executionErrorPeers?: string;
 };
 
 function formatRangeReq(req: {startSlot: Slot; count: number}): string {
@@ -144,23 +158,23 @@ export class Batch {
   readonly startSlot: Slot;
   readonly count: number;
 
-  /** Block, blob and column requests that are used to determine the best peer and are used in downloadByRange */
+  /** Block, column and envelope requests that are used to determine the best peer and are used in downloadByRange */
   requests: DownloadByRangeRequests;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
   /** Peers that provided good data, with column coverage for by_range requests */
   private readonly successfulDownloads = new Map<PeerIdStr, TrackedRequest>();
-  /** The `Attempts` that have been made and failed to send us this batch. */
-  readonly failedProcessingAttempts: Attempt[] = [];
-  /** The `Attempts` that have been made and failed because of execution malfunction. */
-  readonly executionErrorAttempts: Attempt[] = [];
+  /** The attempts that have been made and failed to send us this batch. */
+  readonly failedProcessingAttempts: FailedAttempt[] = [];
+  /** The attempts that have been made and failed because of execution malfunction. */
+  readonly executionErrorAttempts: FailedAttempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
   private readonly isFirstBatchInChain: boolean;
-  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
+  private readonly parentPayload: ParentPayload | undefined;
 
   constructor(
     startEpoch: Epoch,
@@ -168,7 +182,7 @@ export class Batch {
     clock: IClock,
     custodyConfig: CustodyConfig,
     isFirstBatchInChain: boolean,
-    latestBid: gloas.ExecutionPayloadBid | undefined,
+    parentPayload: ParentPayload | undefined,
     targetSlot: Slot
   ) {
     this.config = config;
@@ -181,7 +195,7 @@ export class Batch {
     this.startSlot = startSlot;
     this.count = Math.min(count, targetSlot - startSlot + 1);
     this.isFirstBatchInChain = isFirstBatchInChain;
-    this.latestBid = latestBid;
+    this.parentPayload = parentPayload;
     this.requests = this.getRequests([]);
   }
 
@@ -193,28 +207,23 @@ export class Batch {
     }
 
     // we only know if we should download parent envelope if firstBlock is downloaded
-    if (firstBlock === undefined) return false;
-    if (this.latestBid === undefined) return false;
-    const firstBlockBidParentHash = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
-      .parentBlockHash;
-    return byteArrayEquals(firstBlockBidParentHash, this.latestBid.blockHash);
+    if (firstBlock === undefined || this.parentPayload === undefined) return false;
+    const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
+    return (
+      byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
+    );
   }
 
-  getParentPayloadCommitments(parentBlockRoot: Uint8Array): ParentPayloadCommitments {
-    if (this.latestBid === undefined) {
-      throw new Error(
-        `Coding error: getParentPayloadCommitments called without latestBid for parentBlockRoot=${toRootHex(parentBlockRoot)}`
-      );
+  getParentPayload(): ParentPayload {
+    if (this.parentPayload === undefined) {
+      throw new Error("Coding error: getParentPayload called without parentPayload");
     }
-    return {
-      blockRoot: parentBlockRoot,
-      blockRootHex: toRootHex(parentBlockRoot),
-      kzgCommitments: this.latestBid.blobKzgCommitments,
-    };
+    return this.parentPayload;
   }
 
   /**
-   * Builds ByRange requests for block, blobs and columns
+   * Builds ByRange requests for block, columns and envelopes
    */
   private getRequests(blocks: IBlockInput[]): DownloadByRangeRequests {
     const withinValidRequestWindow = !isDaOutOfRange(
@@ -244,8 +253,6 @@ export class Batch {
           count: this.count,
           columns: this.custodyConfig.sampledColumns,
         };
-      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        requests.blobsRequest = {startSlot: this.startSlot, count: this.count};
       }
 
       return requests;
@@ -324,23 +331,15 @@ export class Batch {
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
-      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        // Skip the column re-request when we have no specific column indices outstanding.
-        // Peer rejects an empty `columns` list
-        if (neededColumns.size > 0) {
-          requests.columnsRequest = {
-            count,
-            startSlot: dataStartSlot,
-            columns: Array.from(neededColumns),
-          };
-        }
-      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        requests.blobsRequest = {
+      // Peer rejects an empty `columns` list
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow && neededColumns.size > 0) {
+        requests.columnsRequest = {
           count,
           startSlot: dataStartSlot,
+          columns: Array.from(neededColumns),
         };
       }
-      // dataSlot will still have a value but do not create a request for preDeneb forks
+      // dataSlot will still have a value but do not create a request for pre-fulu forks
     }
 
     if (isForkPostGloas(this.forkName) && envelopeStartSlot <= endSlot) {
@@ -417,10 +416,18 @@ export class Batch {
   }
 
   /**
-   * Gives a list of peers from which this batch has had a failed download or processing attempt.
+   * Gives a list of peers from which this batch has had a failed download attempt, or a
+   * peer-attributable failed processing/execution attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+    return [...this.failedDownloadAttempts, ...this.getPeerAttributableAttempts().flatMap((a) => a.peers)];
+  }
+
+  /**
+   * Attempts whose failure is peer-attributable, across both the processing and execution error
+   */
+  getPeerAttributableAttempts(): FailedAttempt[] {
+    return [...this.failedProcessingAttempts, ...this.executionErrorAttempts].filter((a) => a.peerAttributable);
   }
 
   /**
@@ -453,24 +460,28 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    const {blocksRequest, columnsRequest, envelopesRequest} = this.requests;
     const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
+    const executionErrorPeerList = this.executionErrorAttempts.flatMap((a) => a.peers);
     return {
       startEpoch: this.startEpoch,
       startSlot: this.startSlot,
       count: this.count,
       status: this.state.status,
       ...(blocksRequest && {blocksReq: formatRangeReq(blocksRequest)}),
-      ...(blobsRequest && {blobsReq: formatRangeReq(blobsRequest)}),
       ...(columnsRequest && {columnsReq: formatColumnsReq(columnsRequest)}),
       ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
       downloadAttempts: this.failedDownloadAttempts.length,
       processingAttempts: this.failedProcessingAttempts.length,
+      executionErrorAttempts: this.executionErrorAttempts.length,
       ...(this.failedDownloadAttempts.length > 0 && {
         failedDownloadPeers: this.failedDownloadAttempts.join(","),
       }),
       ...(failedProcessingPeerList.length > 0 && {
         failedProcessingPeers: failedProcessingPeerList.join(","),
+      }),
+      ...(executionErrorPeerList.length > 0 && {
+        executionErrorPeers: executionErrorPeerList.join(","),
       }),
     };
   }
@@ -589,7 +600,11 @@ export class Batch {
     }
 
     if (allComplete) {
-      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      const attempt: Attempt = {
+        peers: this.getSuccessfulPeers(),
+        hash: hashBlocks(blocks, payloadEnvelopes),
+      };
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
       this.requests = this.getRequests(blocks);
@@ -616,6 +631,26 @@ export class Batch {
       blocks: this.state.blocks,
       payloadEnvelopes: this.state.payloadEnvelopes,
     };
+  }
+
+  /**
+   * Downloading -> AwaitingDownload
+   *
+   * The batch may hold an evicted invalid block, drop every downloaded block and request the whole batch again
+   */
+  downloadingInvalidBlock(peer: PeerIdStr): void {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
+    }
+
+    this.failedDownloadAttempts.push(peer);
+    if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+    }
+
+    this.successfulDownloads.clear();
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
   }
 
   /**
@@ -646,15 +681,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    const blocks = this.state.blocks;
-    const payloadEnvelopes = this.state.payloadEnvelopes;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
-    // the peers that the data came from will be handled by the Attempt that goes for processing.
-    const peers = this.getSuccessfulPeers();
+    const {blocks, payloadEnvelopes, attempt} = this.state;
+    // No need to track successfulDownloads anymore, the batch goes to Processing status.
     this.successfulDownloads.clear();
-    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes, peers};
+    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt};
+    return {blocks, payloadEnvelopes, peers: attempt.peers};
   }
 
   /**
@@ -674,6 +705,26 @@ export class Batch {
   }
 
   /**
+   * Processing -> AwaitingProcessing
+   *
+   * The batch's own blocks are valid but processing failed because a previous batch did not
+   * deliver the parent. Keep the downloaded blocks and process them again once the previous
+   * batch is repaired.
+   */
+  retainForReprocessing(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingProcessing,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+      attempt: this.state.attempt,
+    };
+  }
+
+  /**
    * Processing -> AwaitingDownload
    */
   processingError(err: Error): void {
@@ -681,11 +732,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
-      this.onExecutionEngineError(this.state.attempt);
-    } else {
-      this.onProcessingError(this.state.attempt);
-    }
+    this.routeProcessingFailure(err, this.state.attempt);
   }
 
   /**
@@ -696,10 +743,17 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
-      this.onExecutionEngineError(this.state.attempt);
+    this.routeProcessingFailure(err, this.state.attempt);
+  }
+
+  private routeProcessingFailure(err: Error, attempt: Attempt): void {
+    const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
+    const failedAttempt: FailedAttempt = {...attempt, peerAttributable: isPeerAttributableFailure(code)};
+
+    if (isExecutionEngineFailure(code)) {
+      this.onExecutionEngineError(failedAttempt);
     } else {
-      this.onProcessingError(this.state.attempt);
+      this.onProcessingError(failedAttempt);
     }
   }
 
@@ -713,7 +767,7 @@ export class Batch {
     return this.state.attempt;
   }
 
-  private onExecutionEngineError(attempt: Attempt): void {
+  private onExecutionEngineError(attempt: FailedAttempt): void {
     this.executionErrorAttempts.push(attempt);
     if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
@@ -722,9 +776,10 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
   }
 
-  private onProcessingError(attempt: Attempt): void {
+  private onProcessingError(attempt: FailedAttempt): void {
     this.failedProcessingAttempts.push(attempt);
     if (this.failedProcessingAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
@@ -733,6 +788,16 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
+  }
+
+  /**
+   * After a partial download `requests` only cover the data still missing from the downloaded blocks,
+   * e.g. a single column. Once those blocks are dropped, request the whole batch again, otherwise
+   * every peer fails the retry for lack of blocks to validate the data against.
+   */
+  private resetRequests(): void {
+    this.requests = this.getRequests([]);
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
@@ -750,7 +815,7 @@ export enum BatchErrorCode {
   INVALID_COUNT = "BATCH_ERROR_INVALID_COUNT",
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
-  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
+  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "BATCH_ERROR_MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
 }
 
 type BatchErrorType =
@@ -766,3 +831,45 @@ type BatchErrorMetadata = {
 };
 
 export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}
+
+/**
+ * Whether a processing failure is an execution-engine failure. Pre-gloas, all EL errors stay in
+ * BlockErrorCode, post-gloas, they stay in PayloadErrorCode.
+ */
+function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
+  return (
+    code === BlockErrorCode.EXECUTION_ENGINE_INVALID ||
+    code === BlockErrorCode.EXECUTION_ENGINE_ERROR ||
+    code === PayloadErrorCode.EXECUTION_ENGINE_INVALID ||
+    code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
+  );
+}
+
+/**
+ * Based on an error code, return if peer is attributable for FailedAttempt.
+ */
+function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
+  switch (code) {
+    // EL returned a definitive INVALID verdict on the payload
+    case BlockErrorCode.EXECUTION_ENGINE_INVALID:
+    case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+    // a block or envelope signature is invalid
+    case BlockErrorCode.INVALID_SIGNATURE:
+    case PayloadErrorCode.INVALID_SIGNATURE:
+    // the block's state transition produced an invalid state root, or failed per_slot/per_block processing
+    case BlockErrorCode.INVALID_STATE_ROOT:
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+    // the segment this peer served is internally inconsistent (in-segment link breaks, see PR #9684)
+    case BlockErrorCode.NON_LINEAR_SLOTS:
+    case BlockErrorCode.NON_LINEAR_PARENT_ROOTS:
+    case BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS:
+    // the envelope references a mismatched block root, or fails field verification
+    case BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH:
+    case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+    // the peer served a block we have explicitly blacklisted
+    case BlockErrorCode.BLACKLISTED_BLOCK:
+      return true;
+    default:
+      return false;
+  }
+}

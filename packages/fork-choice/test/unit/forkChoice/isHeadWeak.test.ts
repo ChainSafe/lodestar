@@ -36,9 +36,21 @@ describe("Forkchoice / isHeadWeak", () => {
         isGloas: false,
         config: defaultConfig,
         headVotes: 10,
-        proposerBoost: {root: getBlockRoot(headSlot), score: REORG_THRESHOLD},
+        proposerBoost: {root: getBlockRoot(headSlot), score: BigInt(REORG_THRESHOLD) * 1_000_000_000n},
       });
       expect(isHeadWeak(forkChoice, headRoot)).toBe(false);
+    });
+
+    it("is weak when the threshold exceeds its weight by less than one increment", () => {
+      const store = makeStore();
+      store.justified.totalBalance += 1;
+      const {forkChoice, headRoot} = setup({
+        isGloas: false,
+        config: defaultConfig,
+        headVotes: REORG_THRESHOLD,
+        store,
+      });
+      expect(isHeadWeak(forkChoice, headRoot)).toBe(true);
     });
 
     it("ignores equivocating validators, which are gloas-only", () => {
@@ -57,7 +69,7 @@ describe("Forkchoice / isHeadWeak", () => {
         isGloas: true,
         config: gloasConfig,
         headVotes: 10,
-        proposerBoost: {root: getBlockRoot(headSlot), score: REORG_THRESHOLD},
+        proposerBoost: {root: getBlockRoot(headSlot), score: BigInt(REORG_THRESHOLD) * 1_000_000_000n},
       });
       expect(isHeadWeak(forkChoice, headRoot)).toBe(true);
     });

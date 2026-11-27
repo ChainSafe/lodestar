@@ -48,9 +48,11 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     builder?: boolean;
     "builder.selection"?: string;
     "builder.boostFactor"?: string;
+    "builder.minBid"?: string;
+    "builder.urls"?: string[];
+    "builder.maxExecutionPayment"?: string;
+    allowDangerousTrustedPayments?: boolean;
 
-    /** @deprecated */
-    useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
     payloadLocal?: boolean;
@@ -248,8 +250,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   defaultGasLimit: {
-    description: "Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.",
-    defaultDescription: `${defaultOptions.defaultGasLimit}`,
+    description:
+      "Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.",
+    defaultDescription: `GAS_LIMIT_SCHEDULE from Gloas (current default: ${defaultOptions.defaultGasLimit})`,
     type: "number",
   },
 
@@ -275,10 +278,36 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "builder",
   },
 
-  useProduceBlockV3: {
-    hidden: true,
-    deprecated: true,
+  "builder.minBid": {
+    type: "string",
+    description:
+      "Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to the configured cap. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMinBid}`,
+    group: "builder",
+  },
+
+  "builder.urls": {
+    description:
+      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),
+    group: "builder",
+  },
+
+  "builder.maxExecutionPayment": {
+    type: "string",
+    description:
+      "Maximum execution layer payment in Gwei counted toward a builder bid. A value of 0 means only trustless payments via the builder's staked collateral count toward the bid. Values above 0 require `--allowDangerousTrustedPayments`. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMaxExecutionPayment}`,
+    group: "builder",
+  },
+
+  allowDangerousTrustedPayments: {
     type: "boolean",
+    description:
+      "Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol",
+    group: "builder",
   },
 
   broadcastValidation: {
@@ -379,9 +408,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys
-        .flatMap((item) => item.split(","))
-        .map(ensure0xPrefix),
+      pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
     group: "externalSigner",
   },
 
@@ -481,9 +508,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "array",
     coerce: (indexes: string[]): number[] =>
       // Parse ["11..13,15..17"] to ["11..13", "15..17"]
-      indexes
-        .flatMap((item) => item.split(","))
-        .flatMap(parseRange),
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 
   fromMnemonic: {
@@ -498,8 +523,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "array",
     coerce: (indexes: string[]): number[] =>
       // Parse ["11..13,15..17"] to ["11..13", "15..17"]
-      indexes
-        .flatMap((item) => item.split(","))
-        .flatMap(parseRange),
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 };

@@ -28,7 +28,13 @@ import {
   parseLoggerArgs,
   parseProposerConfig,
 } from "../../util/index.js";
-import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
+import {
+  parseBuilderBoostFactor,
+  parseBuilderGweiAmount,
+  parseBuilderMinBid,
+  parseBuilderSelection,
+  parseBuilderUrls,
+} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -41,8 +47,12 @@ import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 
 /**
  * Runs a validator client.
+ * Set `exitOnShutdown` to false if something else in the process exits it after its own shutdown.
  */
-export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
+export async function validatorHandler(
+  args: IValidatorCliArgs & GlobalArgs,
+  {exitOnShutdown = true}: {exitOnShutdown?: boolean} = {}
+): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const {doppelgangerProtection} = args;
@@ -71,7 +81,17 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
+    try {
+      for (const cb of onGracefulShutdownCbs) await cb();
+      logger.debug("Validator client closed");
+    } catch (e) {
+      logger.warn("Error closing validator client", {}, e as Error);
+      process.exitCode = 1;
+    }
+    if (exitOnShutdown) {
+      // Explicitly exit process due to potential active handles (e.g. EventSource / in-flight HTTP via DVT middleware)
+      process.exit(process.exitCode ?? 0);
+    }
   }, logger.info.bind(logger));
 
   // Callback for validator to request forced exit, in case of doppelganger detection
@@ -212,7 +232,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       validator,
       persistedKeysBackend,
       abortController.signal,
-      proposerConfigWriteDisabled
+      proposerConfigWriteDisabled,
+      args.allowDangerousTrustedPayments
     );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
@@ -250,6 +271,9 @@ function getProposerConfigFromArgs(
         args["builder.selection"] ?? (args.builder ? defaultOptions.builderAliasSelection : undefined)
       ),
       boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
+      minBid: parseBuilderMinBid(args["builder.minBid"]),
+      maxExecutionPayment: parseBuilderGweiAmount(args["builder.maxExecutionPayment"]),
+      builders: parseBuilderUrls(args["builder.urls"]),
     },
   };
 
@@ -273,6 +297,34 @@ function getProposerConfigFromArgs(
       valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
     }
   }
+
+  // Trusted execution payments are only backed by the builder's promise to pay, require an
+  // explicit opt-in before any configuration source can set a max execution payment above 0
+  if (args.allowDangerousTrustedPayments !== true) {
+    const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
+    const hasTrustedPayment = configs.some(
+      (config) =>
+        (config.builder?.maxExecutionPayment ?? 0n) > 0n ||
+        (config.builder?.builders ?? []).some((entry) => (entry.maxExecutionPayment ?? 0n) > 0n)
+    );
+    if (hasTrustedPayment) {
+      throw new YargsError(
+        "Configuring a builder max execution payment above 0 requires --allowDangerousTrustedPayments"
+      );
+    }
+  }
+
+  const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
+  if (
+    configs.some(
+      (config) =>
+        config.builder?.selection === routes.validator.BuilderSelection.ExecutionOnly &&
+        (config.builder.builders ?? []).length > 0
+    )
+  ) {
+    throw new YargsError("Builder selection executiononly can not be combined with builders");
+  }
+
   return valProposerConfig;
 }
 

@@ -104,6 +104,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
+  const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -145,10 +146,14 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
+    // heze
+    HEZE_FORK_VERSION: hezeForkRelevant,
+    HEZE_FORK_EPOCH: hezeForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
     SLOT_DURATION_MS: true,
+    SLOT_DURATION_MS_HEZE: hezeForkRelevant,
     SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
@@ -192,6 +197,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
+    MIN_BLOB_DATA_RETENTION_MS: hezeForkRelevant,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
     DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
@@ -199,6 +205,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
     MAX_REQUEST_PAYLOADS: false,
+    MIN_TRANSACTION_GAS: false,
 
     // # Phase0Preset
     /////////////////
@@ -330,10 +337,18 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
     MAX_ATTESTER_SLASHING_SIZE: false,
-    MAX_DATA_COLUMN_SIDECAR_SIZE: false,
-    MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+    GAS_LIMIT_SCHEDULE: false,
+
+    // HEZE
+    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
+    MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: false,
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
+    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
+    MAX_SIGNED_INCLUSION_LIST_SIZE: false,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

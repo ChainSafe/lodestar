@@ -7,7 +7,6 @@ import {JsonSchema, OpenApiJson, applyRecursively, parseOpenApiSpec} from "./par
 
 // Current Ajv package is a commonjs package which cause problem
 // when we have moduleResolution set to node16
-// This syntax works and tested with Node and Bun both
 const Ajv = ajvPkg.default;
 
 const ajv = new Ajv({
@@ -22,6 +21,7 @@ ajv.addKeyword({
 });
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]*$/);
+ajv.addFormat("uri", {type: "string", validate: (value) => URL.canParse(value)});
 
 /**
  * A set of properties that will be ignored during tests execution.

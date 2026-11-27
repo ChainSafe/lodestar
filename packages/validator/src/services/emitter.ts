@@ -12,6 +12,10 @@ export enum ValidatorEvent {
    * This event signals that an execution payload and blobs are available for payload attestation.
    */
   executionPayloadAvailable = "executionPayloadAvailable",
+  /**
+   * This event signals that an execution payload was verified by the execution client and imported to fork choice.
+   */
+  executionPayloadImported = "executionPayloadImported",
 }
 
 export type ExecutionPayloadAvailableEventData = {
@@ -19,9 +23,15 @@ export type ExecutionPayloadAvailableEventData = {
   blockRoot: string;
 };
 
+export type ExecutionPayloadImportedEventData = {
+  slot: Slot;
+  blockRoot: string;
+};
+
 export type ValidatorEvents = {
   [ValidatorEvent.chainHead]: (head: HeadEventData) => void;
   [ValidatorEvent.executionPayloadAvailable]: (payload: ExecutionPayloadAvailableEventData) => void;
+  [ValidatorEvent.executionPayloadImported]: (payload: ExecutionPayloadImportedEventData) => void;
 };
 
 /**

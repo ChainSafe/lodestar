@@ -46,7 +46,7 @@ export async function computeBlockRewards(
     let parentSlot: Slot | null = null;
     if (isForkPostGloas(fork)) {
       const gloasState = preState as CachedBeaconStateGloas;
-      parentSlot = gloasState.latestExecutionPayloadBid.slot;
+      parentSlot = gloasState.latestBlockHeader.slot;
       processParentExecutionPayload(gloasState, block as gloas.BeaconBlock);
     }
     blockAttestationReward =

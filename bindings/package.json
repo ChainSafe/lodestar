@@ -1,0 +1,106 @@
+{
+  "name": "@lodestar/native",
+  "version": "1.50.1",
+  "description": "Native consensus modules for Lodestar",
+  "files": [
+    "src/"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./blst": {
+      "types": "./src/blst.d.ts",
+      "import": "./src/blst.js"
+    },
+    "./bls-verifier": {
+      "types": "./src/bls-verifier.d.ts",
+      "import": "./src/bls-verifier.js"
+    },
+    "./pubkeys": {
+      "types": "./src/pubkeys.d.ts",
+      "import": "./src/pubkeys.js"
+    },
+    "./committee-pubkeys": {
+      "types": "./src/committee-pubkeys.d.ts",
+      "import": "./src/committee-pubkeys.js"
+    },
+    "./state-transition": {
+      "types": "./src/state-transition.d.ts",
+      "import": "./src/state-transition.js"
+    },
+    "./metrics": {
+      "types": "./src/metrics.d.ts",
+      "import": "./src/metrics.js"
+    },
+    "./shuffle": {
+      "types": "./src/shuffle.d.ts",
+      "import": "./src/shuffle.js"
+    },
+    "./execution-proof-verifier": {
+      "types": "./src/execution-proof-verifier.d.ts",
+      "import": "./src/execution-proof-verifier.js"
+    },
+    "./execution-block-hash": {
+      "types": "./src/execution-block-hash.d.ts",
+      "import": "./src/execution-block-hash.js"
+    }
+  },
+  "scripts": {
+    "prepare-mainnet": "zapi build --variant mainnet --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
+    "prepare-minimal": "zapi build --variant minimal --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
+    "prepare-gnosis": "zapi build --variant gnosis --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
+    "lint": "biome check",
+    "test": "NODE_OPTIONS='--expose-gc' vitest run",
+    "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
+    "build": "pnpm run prepare-mainnet && pnpm run prepare-minimal && pnpm run prepare-gnosis",
+    "build:watch": "preset=${LODESTAR_PRESET:-mainnet} && mkdir -p zig-out/lib && ln -sf bindings.node zig-out/lib/bindings-$preset.node && cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=$preset --prefix bindings/zig-out --watch",
+    "build:release": "pnpm clean && pnpm build",
+    "clean": "rm -rf zig-out",
+    "check-build": "for preset in mainnet minimal gnosis; do LODESTAR_PRESET=$preset node -e \"import('./src/index.js')\" || exit 1; done",
+    "prepack": "zapi prepublish --main-only"
+  },
+  "keywords": [],
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/lodestar.git",
+    "directory": "bindings"
+  },
+  "zapi": {
+    "binaryName": "bindings",
+    "step": "build-lib:bindings",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
+    ],
+    "variants": {
+      "mainnet": [
+        "-Dpreset=mainnet"
+      ],
+      "minimal": [
+        "-Dpreset=minimal"
+      ],
+      "gnosis": [
+        "-Dpreset=gnosis"
+      ]
+    }
+  },
+  "dependencies": {
+    "@chainsafe/zapi": "4.5.0"
+  },
+  "devDependencies": {
+    "@chainsafe/benchmark": "2.1.0",
+    "@chainsafe/ssz": "^1.9.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

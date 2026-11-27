@@ -10,7 +10,7 @@ import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js
 import {waitForSlot} from "../utils/crucible/utils/network.js";
 
 const ELECTRA_FORK_EPOCH = 0;
-const FULU_FORK_EPOCH = 1;
+const FULU_FORK_EPOCH = 0;
 const validatorCount = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({

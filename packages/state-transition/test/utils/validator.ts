@@ -1,6 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
+import {interopSecretKey} from "../../src/util/interop.js";
 
 export type ValidatorGeneratorOpts = {
   activation?: number;
@@ -40,6 +41,11 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): phase0.Val
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): phase0.Validator[] {
-  return Array.from({length: n}, () => generateValidator(opts));
+export function generateValidators(n: number, opts?: ValidatorGeneratorOpts, startIndex = 0): phase0.Validator[] {
+  return Array.from({length: n}, (_, i) => ({
+    ...generateValidator(opts),
+    pubkey: interopSecretKey(startIndex + i)
+      .toPublicKey()
+      .toBytes(),
+  }));
 }

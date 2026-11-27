@@ -39,6 +39,7 @@ export const BlindedBlob = Bytes32;
 export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const VersionedHash = Bytes32;
+export const VersionedHashes = new ListCompositeType(VersionedHash, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
@@ -80,6 +81,15 @@ export const ExecutionPayloadHeader = new ContainerType(
     excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
+);
+
+export const NewPayloadRequest = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+    versionedHashes: VersionedHashes,
+    parentBeaconBlockRoot: Root,
+  },
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload

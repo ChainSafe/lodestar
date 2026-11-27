@@ -3,7 +3,7 @@ import {presetStatus} from "./presetStatus.js";
 import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {userOverrides, userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
@@ -31,7 +31,7 @@ export const ACTIVE_PRESET =
   userSelectedPreset ??
   (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
   PresetName.mainnet;
-export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -122,9 +122,11 @@ export const {
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_ATTESTER_SLASHING_SIZE,
-  MAX_DATA_COLUMN_SIDECAR_SIZE,
-  MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+
+  INCLUSION_LIST_COMMITTEE_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
 } = activePreset;
 
 ////////////
@@ -171,6 +173,7 @@ export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains
 
@@ -182,6 +185,7 @@ export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
  */
 export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+export const DOMAIN_BUILDER_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 
 // Participation flag indices
 
@@ -308,13 +312,6 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 23;
 export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
-/**
- * Optimistic sync
- * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
- */
-export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
-/** @deprecated */
-export const INTERVALS_PER_SLOT = 3;
 export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
@@ -367,3 +364,15 @@ export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
 export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
 export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
+
+// Gloas builder specs
+export const MAX_BUILDER_AUTH_DATA_SIZE = 4096;
+export const MAX_BUILDER_ENTRIES = 64;
+export const MAX_BUILDER_URL_SIZE = 2048;
+export const MAX_BUILDER_PUBKEYS = 64;
+export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;
+
+// EIP-8025 execution proofs
+export const MAX_PROOF_SIZE = 4194304;
+export const STATELESS_INPUT_SCHEMA_ID = 0x1501;
+export const MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE = 4194449;

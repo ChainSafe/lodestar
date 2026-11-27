@@ -67,7 +67,7 @@ export function processAttestationsAltair(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
-      if (!verifySignatureSet(sigSet, state.epochCtx.pubkeyCache)) {
+      if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }
     }
@@ -134,14 +134,17 @@ export function processAttestationsAltair(
         }
       }
 
-      if (isSameSlotAttestation && flagsNewSet !== 0) {
+      if (fork >= ForkSeq.gloas && isSameSlotAttestation && flags === 0 && flagsNewSet !== 0) {
         paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
       }
     }
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
-    const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
+    // The proposer reward is priced at the attestation's target epoch
+    const proposerRewardNumerator =
+      totalIncrements *
+      (inCurrentEpoch ? state.epochCtx.baseRewardPerIncrement : state.epochCtx.baseRewardPerIncrementPrevEpoch);
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
 
     if (fork >= ForkSeq.gloas) {

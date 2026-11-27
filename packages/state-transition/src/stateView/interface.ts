@@ -9,6 +9,8 @@ import {
   ForkPostElectra,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPostHeze,
+  ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -16,6 +18,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -27,6 +30,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  Gwei,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -44,12 +48,30 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+
+/** Signed block to apply in a state transition. */
+export type BlockSTFInput = {
+  block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+  /**
+   * Fork-specific SSZ serialization of `block`, using the matching full or blinded block type. Native
+   * implementations serialize `block` when omitted.
+   */
+  ssz?: Uint8Array;
+};
+
+/** State root computation result. Includes data derived from the post-state. */
+export type ComputeNewStateRootResult = {
+  newStateRoot: Root;
+  proposerReward: Gwei;
+  postState: IBeaconStateView;
+  hashTreeRootTime: number;
+};
 
 /**
  * A read-only view of the BeaconState.
@@ -59,6 +81,7 @@ export interface IBeaconStateView {
 
   // phase0
   forkName: ForkName;
+  forkSeq: ForkSeq;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -139,6 +162,13 @@ export interface IBeaconStateView {
   // TODO is there a better name that is less implementation specific but still conveys the meaning?
   isStateValidatorsNodesPopulated(): boolean;
 
+  // Lifecycle
+  /**
+   * Release resources owned by this view.
+   * Do not use the view after calling this method.
+   */
+  release(): void;
+
   // Serialization
   /** Set `preloadValidatorsAndBalances` only when the whole state will be consumed
    *  immediately (e.g. CP reload before block replay). */
@@ -158,16 +188,13 @@ export interface IBeaconStateView {
   hashTreeRoot(): Uint8Array;
 
   // State transition
+  computeNewStateRoot(input: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult;
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    input: BlockSTFInput,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView;
 }
 
 /** Altair+ state fields — use isStatePostAltair() guard */
@@ -180,6 +207,7 @@ export interface IBeaconStateViewAltair extends IBeaconStateView {
   currentSyncCommittee: altair.SyncCommittee;
   nextSyncCommittee: altair.SyncCommittee;
   currentSyncCommitteeIndexed: SyncCommitteeCache;
+  readonly currentSyncCommitteeValidatorIndices: Uint32Array;
   syncProposerReward: number;
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
   /** Get indexed sync committee with slot+1 offset for duty lookups */
@@ -240,6 +268,13 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
 export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
   forkName: ForkPostFulu;
   proposerLookahead: fulu.ProposerLookahead;
+  /**
+   * Pre-verify a slice of builder-prefix pending deposits and cache the results on the underlying
+   * `BuilderDepositSignatureCache` (Fulu is the fork immediately before Gloas).
+   */
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult;
+  /** Drop the pre-Gloas builder-deposit signature cache (called once the Gloas fork is finalized). */
+  clearPreGloasBuilderDepositCache(): void;
 }
 
 /** Gloas+ state fields — use isStatePostGloas() guard */
@@ -253,10 +288,14 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
+  builderPendingPayments: gloas.BuilderPendingPayments;
+  builderPendingWithdrawals: gloas.BuilderPendingWithdrawals;
   getBuilder(index: BuilderIndex): gloas.Builder;
   getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getBuilderBidLimit(builderIndex: BuilderIndex): number;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
   /**
    * Clone the state and apply parent execution payload effects.
@@ -267,14 +306,19 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
 }
 
+/** Heze+ state fields — use isStatePostHeze() guard */
+export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
+  forkName: ForkPostHeze;
+}
+
 /**
  * Type constraint for the concrete BeaconStateView class.
- * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * Requires all fields from the latest fork interface (IBeaconStateViewHeze) but keeps
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
 export type IBeaconStateViewLatestFork = Omit<
-  IBeaconStateViewGloas,
+  IBeaconStateViewHeze,
   "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
@@ -285,29 +329,58 @@ export type IBeaconStateViewLatestFork = Omit<
 /**
  * Contract a BeaconStateView backing implementation must satisfy.
  *
- * Differs from `IBeaconStateViewLatestFork` in two ways:
- * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
- *   native (`.node`) binding cannot construct a `BitArray` across FFI.
- *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
- * - Methods that produce another view (`stateTransition`, `processSlots`,
- *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
- *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
- *   via `Parameters<...>` to avoid duplicating signatures.
- *
- * The TS-side `BeaconStateView` also structurally satisfies this contract since
- * `BitArray` exposes `uint8Array` and `bitLen`.
+ * Differs from `IBeaconStateViewLatestFork` in these ways:
+ * - SSZ-backed lists use serialized bytes or native typed arrays at the FFI boundary.
+ * - Methods that produce another view return `IBeaconStateViewNative` so callers can re-wrap them.
+ * - `stateTransition` accepts the native block inputs and omits JS-only modules.
+ * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ between implementations.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+  | "computeAttestationsRewards"
+  | "computeBlockRewards"
+  | "computeNewStateRoot"
+  | "computeSyncCommitteeRewards"
+  | "currentSyncCommitteeValidatorIndices"
+  | "eth1Data"
+  | "executionPayloadAvailability"
+  | "getBeaconCommittee"
+  | "loadOtherState"
+  | "pendingConsolidations"
+  | "pendingDeposits"
+  | "pendingPartialWithdrawals"
+  | "processSlots"
+  | "proposerLookahead"
+  | "stateTransition"
+  | "withParentPayloadApplied"
 > & {
+  pendingDeposits: Uint8Array;
+  /** Older native addons expose indices only through currentSyncCommitteeIndexed. */
+  readonly currentSyncCommitteeValidatorIndices?: Uint32Array;
+  pendingPartialWithdrawals: Uint8Array;
+  pendingConsolidations: Uint8Array;
+  proposerLookahead: Uint32Array;
+  eth1Data: phase0.Eth1Data;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  computeBlockRewards(
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
+    proposerRewards?: RewardCache
+  ): rewards.BlockRewards;
+  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): rewards.AttestationsRewards;
+  computeSyncCommitteeRewards(
+    block: BeaconBlock,
+    validatorIds: (ValidatorIndex | string)[]
+  ): rewards.SyncCommitteeRewards;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
-  stateTransition(...args: Parameters<IBeaconStateViewLatestFork["stateTransition"]>): IBeaconStateViewNative;
-  processSlots(...args: Parameters<IBeaconStateViewLatestFork["processSlots"]>): IBeaconStateViewNative;
-  withParentPayloadApplied(
-    ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
+  stateTransition(
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
+    options?: StateTransitionOpts
   ): IBeaconStateViewNative;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
+  withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
 };
 
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
@@ -336,4 +409,8 @@ export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateV
 
 export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
   return isForkPostGloas(state.forkName);
+}
+
+export function isStatePostHeze(state: IBeaconStateView): state is IBeaconStateViewHeze {
+  return isForkPostHeze(state.forkName);
 }

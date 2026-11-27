@@ -47,10 +47,12 @@ export enum DataColumnSidecarErrorCode {
 }
 
 export type DataColumnSidecarErrorType =
-  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; slot: Slot; columnIndex: number}
-  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; slot: Slot; root: RootHex; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; slot: Slot; root: RootHex; columnIndex: number}
   | {
       code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS;
+      slot: Slot;
+      root: RootHex;
       columnLength: number;
       commitmentsLength: number;
       proofsLength: number;
@@ -61,10 +63,17 @@ export type DataColumnSidecarErrorType =
       columnIndex: number;
       fork: ForkName;
     }
-  | {code: DataColumnSidecarErrorCode.INVALID_SUBNET; columnIndex: number; gossipSubnet: SubnetID}
+  | {
+      code: DataColumnSidecarErrorCode.INVALID_SUBNET;
+      slot: Slot;
+      root: RootHex;
+      columnIndex: number;
+      gossipSubnet: SubnetID;
+    }
   | {
       code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS;
       slot: number;
+      root: RootHex;
       columnIndex: number;
       count: number;
       limit: number;
@@ -85,12 +94,12 @@ export type DataColumnSidecarErrorType =
   | {
       code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
       slot: Slot;
-      blockRoot: RootHex;
+      root: RootHex;
       index: number;
     }
-  | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
-  | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; columnIndex: number}
-  | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root: RootHex; parentSlot: Slot}
+  | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; root: RootHex; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF; slot: Slot; root: RootHex; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT; slot: number; expected: number; actual: number}
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_BLOCK;
@@ -106,6 +115,7 @@ export type DataColumnSidecarErrorType =
     }
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT;
+      root: RootHex;
       columnIndex: number;
       expected: Slot;
       actual: Slot;
@@ -127,7 +137,13 @@ export type DataColumnSidecarErrorType =
       actual: number;
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
-  | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER;
+      slot: Slot;
+      root: RootHex;
+      actualProposerIndex: number;
+      expectedProposerIndex: number;
+    }
   | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}

@@ -32,9 +32,8 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  // for NodeJS, profile the whole epoch
-  // for Bun, profile 1 slot. Otherwise it will either crash the app, and/or inspector cannot render the profile
-  const defaultProfileMs = globalThis.Bun ? config.SLOT_DURATION_MS : SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  // profile the whole epoch by default
+  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {
@@ -148,7 +147,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.regen.dropCache();
+      await chain.regen.dropCache();
     },
 
     async connectPeer({peerId, multiaddrs}) {
@@ -281,7 +280,7 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+      const fcrStore = chain.forkChoice.getFastConfirmationStore();
       const confirmedBlock = chain.forkChoice.getConfirmedBlock();
       const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
       const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
@@ -291,21 +290,20 @@ export function getLodestarApi({
       return {
         data: {
           confirmed: {
-            rootHex: confirmedRoot,
-            slot: confirmedBlock?.slot ?? null,
+            root: fromHex(fcrStore.confirmedRoot),
+            slot: confirmedBlock?.slot ?? 0,
           },
           head: {
-            rootHex: headRoot,
+            root: fromHex(headRoot),
             slot: head.slot,
           },
-          justifiedCheckpoint: {
-            rootHex: justifiedCheckpoint.rootHex,
-            epoch: justifiedCheckpoint.epoch,
-          },
-          finalizedCheckpoint: {
-            rootHex: finalizedCheckpoint.rootHex,
-            epoch: finalizedCheckpoint.epoch,
-          },
+          justifiedCheckpoint,
+          finalizedCheckpoint,
+          previousEpochObservedJustifiedCheckpoint: fcrStore.previousEpochObservedJustifiedCheckpoint,
+          currentEpochObservedJustifiedCheckpoint: fcrStore.currentEpochObservedJustifiedCheckpoint,
+          previousEpochGreatestUnrealizedCheckpoint: fcrStore.previousEpochGreatestUnrealizedCheckpoint,
+          previousSlotHead: fromHex(fcrStore.previousSlotHead),
+          currentSlotHead: fromHex(fcrStore.currentSlotHead),
         },
       };
     },

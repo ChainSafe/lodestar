@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-import {equalCheckpointWithHex} from "../store.ts";
+import {equalCheckpointWithHex} from "../store.js";
 import {
   FastConfirmationCache,
   FastConfirmationContext,
@@ -11,8 +11,8 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
   isResetReason,
-} from "./types.ts";
-import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.ts";
+} from "./types.js";
+import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.js";
 
 export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
@@ -40,7 +40,10 @@ export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (
 
   const confirmedEpochBehindHead = confirmedEpoch + 1 < snapshot.currentEpoch;
   const notAncestorOfHead = !isAncestor(ctx, cache, snapshot.headRoot, decision.confirmedRoot);
+  // Short-circuit like the spec's `or`: the chain safety walk is expensive and needs the head state
   const allChildrenNotConfirmed =
+    !confirmedEpochBehindHead &&
+    !notAncestorOfHead &&
     isStartSlotOfEpoch(snapshot.currentSlot) &&
     !isConfirmedChainSafe(ctx, store, cache, decision.confirmedRoot, logger);
 

@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, ForkPreGloas, isForkPostGloas} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -8,15 +9,16 @@ import {
   BlindedBeaconBlock,
   BlockContents,
   ProducedBlockSource,
+  SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyGweiToEth, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 import {ValidatorStore} from "./validatorStore.js";
 
@@ -41,6 +43,10 @@ type BlockProposalOpts = {
   blindedLocal: boolean;
   payloadLocal: boolean;
 };
+
+/** Excludes all p2p bids, builder API bids are excluded by not sending any builder entries */
+const EXECUTION_ONLY_MIN_BID = 2n ** 64n - 1n;
+
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -105,7 +111,7 @@ export class BlockProposingService {
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const {selection: builderSelection, boostFactor: builderBoostFactor} =
-        this.validatorStore.getBuilderSelectionParams(pubkeyHex);
+        this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
 
@@ -143,7 +149,9 @@ export class BlockProposingService {
       const block = blockContentsWrapper.executionPayloadBlinded
         ? blockContentsWrapper.block
         : blockContentsWrapper.blockContents.block;
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
+      const signedBlock = (await this.validatorStore.signBlock(pubkey, block, slot, this.logger)) as
+        | SignedBeaconBlock<ForkPreGloas>
+        | SignedBlindedBeaconBlock;
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
@@ -189,12 +197,52 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+    const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
     const {broadcastValidation, payloadLocal} = this.opts;
     const {selection: builderSelection, boostFactor: builderBoostFactor} =
       this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
+    // `executiononly` never uses a builder bid, neither from builder APIs nor received over p2p
+    const isExecutionOnly = builderSelection === routes.validator.BuilderSelection.ExecutionOnly;
+    const builderMinBid = isExecutionOnly ? EXECUTION_ONLY_MIN_BID : this.validatorStore.getBuilderMinBid(pubkeyHex);
+    const builderEntries = isExecutionOnly
+      ? []
+      : this.validatorStore.getResolvedBuilderEntries(pubkeyHex, builderBoostFactor);
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal, builderSelection});
+    this.logger.debug("Producing block", {
+      ...debugLogCtx,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      payloadLocal,
+      builderSelection,
+      builderBoostFactor,
+      builderMinBid: prettyGweiToEth(builderMinBid),
+      builderUrls: builderEntries.map((entry) => entry.url).join(","),
+    });
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
+    // One entry per resolved builder, authenticated by a request auth signed over the entry's
+    // auth data. The auth is usually pre-signed when preferences are submitted ahead of the
+    // proposal. An entry whose auth cannot be signed is skipped so it never fails the proposal.
+    const builders: routes.validator.BuilderEntry[] = (
+      await Promise.all(
+        builderEntries.map(async (entry) => {
+          try {
+            const auth = await this.validatorStore.getBuilderRequestAuth(pubkey, entry.authData, slot, slot);
+            return {
+              url: new TextEncoder().encode(entry.url),
+              auth,
+              builderPubkeys: entry.builderPubkeys,
+              maxExecutionPayment: entry.maxExecutionPayment,
+              minBid: entry.minBid,
+              builderBoostFactor: entry.builderBoostFactor,
+            };
+          } catch (e) {
+            this.logger.warn("Failed to sign builder request auth", {...logCtx, builderUrl: entry.url}, e as Error);
+            return null;
+          }
+        })
+      )
+    ).filter((entry) => entry !== null);
 
     // Step 1: Produce beacon block with execution payload bid
     const blockRes = await this.api.validator
@@ -203,9 +251,13 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        strictFeeRecipientCheck,
         includePayload: !payloadLocal,
-        builderSelection,
-        builderBoostFactor,
+        builderConfig: {
+          minBid: builderMinBid,
+          builderBoostFactor,
+          builders,
+        },
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
@@ -217,6 +269,14 @@ export class BlockProposingService {
     const block = executionPayloadIncluded
       ? (blockOrContents as BlockContents<ForkPostGloas>).block
       : (blockOrContents as BeaconBlock<ForkPostGloas>);
+    const {builderIndex} = block.body.signedExecutionPayloadBid.message;
+    const isSelfBuild = builderIndex === BUILDER_INDEX_SELF_BUILD;
+    if (isExecutionOnly && !isSelfBuild) {
+      this.metrics?.blockProposingErrors.inc({error: "produce"});
+      throw Error(
+        `Block not produced as per desired builderSelection=${builderSelection} builderIndex=${builderIndex}`
+      );
+    }
     const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(beaconBlockRoot);
 
@@ -239,8 +299,10 @@ export class BlockProposingService {
     (
       await this.api.beacon
         .publishBlockV2({
-          signedBlockContents: {signedBlock},
+          signedBlockContents: {signedBlock} as SignedBlockContents<ForkPostGloas>,
           broadcastValidation,
+          // Echo the winning builder url so any beacon node can forward the block to the builder
+          builderUrl: blockMeta.builderUrl,
         })
         .catch((e: Error) => {
           this.metrics?.blockProposingErrors.inc({error: "publish"});
@@ -259,8 +321,6 @@ export class BlockProposingService {
     });
     this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
     this.metrics?.blocksPublished.inc();
-
-    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
     if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope

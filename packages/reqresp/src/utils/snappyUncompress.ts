@@ -1,6 +1,9 @@
-import {uncompress} from "snappyjs";
 import {Uint8ArrayList} from "uint8arraylist";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
+
+// Match gossip's WASM + Buffer.alloc pattern; native snappy's default buffers retained more RSS in local tests.
+const decoder = new snappyWasm.Decoder();
 
 export function parseSnappyFrameHeader(header: Uint8Array): {type: ChunkType; frameSize: number} {
   if (header.length !== 4) {
@@ -30,11 +33,20 @@ export function decodeSnappyFrameData(type: ChunkType, frame: Uint8Array): Uint8
 
       const checksum = frame.subarray(0, 4);
       const data = frame.subarray(4);
-      const uncompressed = uncompress(data, UNCOMPRESSED_CHUNK_SIZE);
+      // Snappy's uint32 length occupies at most five bytes; validate it before allocating output.
+      const uncompressedLength = snappyWasm.decompress_len(data.subarray(0, 5));
+      if (uncompressedLength > UNCOMPRESSED_CHUNK_SIZE) {
+        throw new Error("malformed input: too large");
+      }
+
+      const uncompressed = Buffer.alloc(uncompressedLength);
+      decoder.decompress_into(data, uncompressed);
       if (crc(uncompressed).compare(checksum) !== 0) {
         throw new Error("malformed input: bad checksum");
       }
-      return uncompressed;
+      return Buffer.isBuffer(data)
+        ? uncompressed
+        : new Uint8Array(uncompressed.buffer, uncompressed.byteOffset, uncompressed.byteLength);
     }
     case ChunkType.UNCOMPRESSED: {
       if (frame.length < 4) {

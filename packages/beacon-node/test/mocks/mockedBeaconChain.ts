@@ -2,20 +2,29 @@ import {Mock, Mocked, vi} from "vitest";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {createPubkeyCache} from "@lodestar/state-transition";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
+import {ForkChoiceExecutionEngine} from "../../src/chain/forkChoiceExecutionEngine.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
-import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {
+  AggregatedAttestationPool,
+  InclusionListStore,
+  OpPool,
+  SingleAttestationPool,
+  SyncContributionAndProofPool,
+} from "../../src/chain/opPools/index.js";
+import {ProposerTracker} from "../../src/chain/proposerTracker.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
+import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
+import {BuilderApiClient, DEFAULT_BUILDER_BID_DEADLINE_MS} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
 import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
@@ -23,10 +32,11 @@ import {getMockedLogger} from "./loggerMock.js";
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
   forkChoice: MockedForkChoice;
-  executionEngine: Mocked<ExecutionEngineHttp>;
+  executionEngine: Mocked<ForkChoiceExecutionEngine>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
+  builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
@@ -54,6 +64,9 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHead: vi.fn(),
       getHeadRoot: vi.fn(),
       getDependentRoot: vi.fn(),
+      recordPayloadInclusionListSatisfaction: vi.fn(),
+      isPayloadInclusionListSatisfied: vi.fn(),
+      getPayloadInclusionListSatisfaction: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
@@ -77,8 +90,9 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),
       notifyPtcMessages: vi.fn(),
+      getPtcQuorum: vi.fn(),
       shouldBuildOnFull: vi.fn(),
-      getPayloadRevealCounts: vi.fn(),
+      getCanonicalPayloadCounts: vi.fn(),
     };
   });
 
@@ -159,12 +173,32 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         add: vi.fn(),
         getBestBid: vi.fn(),
       },
+      proposerPreferencesPool: {
+        add: vi.fn(),
+        get: vi.fn(),
+        getAll: vi.fn(),
+        isKnown: vi.fn(),
+        prune: vi.fn(),
+        fromPersisted: vi.fn(),
+        toPersisted: vi.fn(),
+      },
+      builderApiClient: {
+        bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
+        getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
+        submitBuilderPreferences: vi.fn(),
+        submitSignedBeaconBlock: vi.fn(),
+        checkStatus: vi.fn().mockResolvedValue(undefined),
+      },
       opPool: new OpPool(config as BeaconConfig),
+      inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
+      singleAttestationPool: new SingleAttestationPool(),
+      proposerTracker: new ProposerTracker(),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
+        getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
       },
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
@@ -172,13 +206,17 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenBlockInputCache: new SeenBlockInput(),
       seenPayloadEnvelopeInputCache: {
         get: vi.fn(),
+        getOrReload: vi.fn(),
+        remove: vi.fn(),
+        removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
+      getParentExecutionRequests: vi.fn(),
       shufflingCache: new ShufflingCache(),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
-      getParentExecutionRequests: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
@@ -186,11 +224,16 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       recomputeForkChoiceHead: vi.fn(),
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
+      getHeadStateAtEpoch: vi.fn(),
       getHeadState: vi.fn(),
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
+      updateAttachedValidators: vi.fn(),
       processBlock: vi.fn(),
+      processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
+      persistExecutionPayloadEnvelope: vi.fn(),
+      persistInvalidSignature: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,

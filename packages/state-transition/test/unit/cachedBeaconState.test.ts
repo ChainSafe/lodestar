@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
@@ -10,8 +10,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
-import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
+import {toHex} from "@lodestar/utils";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
@@ -34,7 +33,7 @@ describe("CachedBeaconState", () => {
     const prevRoot = state2.currentJustifiedCheckpoint.root;
     const newRoot = Buffer.alloc(32, 1);
     state1.currentJustifiedCheckpoint.root = newRoot;
-    expect(toHexString(state2.currentJustifiedCheckpoint.root)).toBe(toHexString(prevRoot));
+    expect(toHex(state2.currentJustifiedCheckpoint.root)).toBe(toHex(prevRoot));
 
     state1.epochCtx.epoch = 1;
     expect(state2.epochCtx.epoch).toBe(0);
@@ -44,14 +43,9 @@ describe("CachedBeaconState", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
-    const pubkey1 = fromHexString(
-      "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
-    );
-    const index1 = 123;
-    const pubkey2 = fromHexString(
-      "0xa41726266b1d83ef609d759ba7796d54cfe549154e01e4730a3378309bc81a7638140d7e184b33593c072595f23f032d"
-    );
-    const index2 = 456;
+    const index1 = pubkeyCache.size;
+    const index2 = index1 + 1;
+    const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
     state1.epochCtx.addPubkey(index1, pubkey1);
 
@@ -74,7 +68,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.hashTreeRoot())).toBe(toHexString(cp2.hashTreeRoot()));
+    expect(toHex(cp1.hashTreeRoot())).toBe(toHex(cp2.hashTreeRoot()));
   });
 
   it("Auto-commit on serialize", () => {
@@ -86,7 +80,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
+    expect(toHex(cp1.serialize())).toBe(toHex(cp2.serialize()));
   });
 
   it("reconstructs Gloas next proposers from the state lookahead", () => {
@@ -127,7 +121,7 @@ describe("CachedBeaconState", () => {
     const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
     const seedCachedState = createCachedBeaconState(
       state,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );
     const unslashedActiveIndices = Uint32Array.from({length: unslashedValidatorCount}, (_, index) => index);
@@ -148,7 +142,7 @@ describe("CachedBeaconState", () => {
 
     const cachedState = createCachedBeaconState(
       state,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );
 
@@ -174,11 +168,12 @@ describe("CachedBeaconState", () => {
 
     const stateView = newStateWithValidators(numValidator);
     const config = createBeaconConfig(defaultConfig, stateView.genesisValidatorsRoot);
+    pubkeyCache.reset();
     const seedState = createCachedBeaconState(
       stateView,
       {
         config,
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache,
       },
       {skipSyncCommitteeCache: true}
     );
@@ -280,7 +275,7 @@ describe("CachedBeaconState", () => {
           state,
           {
             config,
-            pubkeyCache: createPubkeyCache(),
+            pubkeyCache,
           },
           {skipSyncCommitteeCache: true, shufflingGetter}
         );

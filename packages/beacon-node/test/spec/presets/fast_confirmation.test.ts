@@ -1,21 +1,13 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {expect} from "vitest";
+import {expect, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {
-  ACTIVE_PRESET,
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPostGloas,
-  ForkPreDeneb,
-  ForkPreFulu,
-  ForkPreGloas,
-  ForkSeq,
-} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ACTIVE_PRESET, ForkPostFulu, ForkPostGloas, ForkPreFulu, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -24,11 +16,8 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
   isGloasStateType,
-  signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -42,15 +31,15 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex, toHex} from "@lodestar/utils";
+import {bnToNum, toHex} from "@lodestar/utils";
 import {
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
@@ -64,15 +53,24 @@ import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
+import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
+
+// bls_setting=2 vectors carry placeholder deposit signatures; mocks the built lib module that epoch processing imports
+const shouldVerifyDepositSignatures = vi.hoisted(() => ({value: true}));
+vi.mock("../../../../state-transition/lib/block/processDeposit.js", async (importOriginal) => {
+  const actual = await importOriginal<{isValidDepositSignature: (...args: unknown[]) => boolean}>();
+  return {
+    ...actual,
+    isValidDepositSignature: (...args: unknown[]) =>
+      !shouldVerifyDepositSignatures.value || actual.isValidDepositSignature(...args),
+  };
+});
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -91,6 +89,7 @@ const fastConfirmationTest =
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
+        shouldVerifyDepositSignatures.value = testcase.meta?.bls_setting === BigInt(1);
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
         // const state = createCachedBeaconStateTest(anchorState, config);
@@ -114,8 +113,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -141,7 +139,6 @@ const fastConfirmationTest =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
             fastConfirmation: true,
@@ -160,6 +157,7 @@ const fastConfirmationTest =
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
+            earliestAvailableSlot: cachedState.slot,
             executionEngine,
             executionBuilder: undefined,
           }
@@ -172,7 +170,8 @@ const fastConfirmationTest =
         logger.debug("Fork choice test", {steps: stepsLen});
 
         try {
-          for (const [i, step] of steps.entries()) {
+          for (const i of getExecutionOrder(steps)) {
+            const step = steps[i];
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
               const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
@@ -232,15 +231,7 @@ const fastConfirmationTest =
 
               // Post-Deneb and pre-Fulu, `columns` should not be present. Post-Fulu `blobs` and
               // `proofs` should not be present.
-              let blobs: deneb.Blob[] | undefined;
-              let proofs: deneb.KZGProof[] | undefined;
               let columns: fulu.DataColumnSidecar[] | undefined;
-              if (step.blobs !== undefined) {
-                blobs = testcase.blobs.get(step.blobs);
-              }
-              if (step.proofs !== undefined) {
-                proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
-              }
               if (step.columns !== undefined) {
                 columns = [];
                 for (const columnName of step.columns) {
@@ -291,7 +282,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -334,59 +326,11 @@ const fastConfirmationTest =
                     });
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
-                  if (blobs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("Missing blobs for the deneb+ block");
-                    blobs = [];
-                  }
-                  if (proofs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("proofs for the deneb+ block");
-                    proofs = [];
-                  }
-                  // the kzg lib for validation of minimal setup is not yet integrated, lets just verify lengths
-                  // post integration use validateBlobsAndProofs
-                  const commitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-                  if (blobs.length !== commitments.length || proofs.length !== commitments.length) {
-                    throw Error("Invalid blobs or proofs lengths");
-                  }
-
-                  const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
-                    return {
-                      index,
-                      blob,
-                      kzgCommitment: commitments[index],
-                      kzgProof: (proofs ?? [])[index],
-                      signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
-                        fork,
-                        signedBlock.message.body,
-                        index
-                      ),
-                    };
-                  });
-
-                  blockImport = BlockInputBlobs.createFromBlock({
-                    forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
-                    blockRootHex,
-                    source: BlockInputSource.gossip,
-                    seenTimestampSec: 0,
-                    daOutOfRange: false,
-                  });
-                  for (const blob of blobSidecars) {
-                    blockImport.addBlob({
-                      blockRootHex,
-                      blobSidecar: blob,
-                      source: BlockInputSource.gossip,
-                      seenTimestampSec: 0,
-                    });
-                  }
                 } else {
+                  // Pre-fulu blocks carry no tracked sidecar data, legacy deneb..electra blobs are not loaded
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -396,7 +340,6 @@ const fastConfirmationTest =
 
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
                   // required to be valid), so only verify signatures when bls_setting=1.
@@ -441,7 +384,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
@@ -455,6 +397,9 @@ const fastConfirmationTest =
                   latestValidHash: null,
                   validationError: null,
                 });
+
+                // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
+                (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
 
                 (chain.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
@@ -546,7 +491,7 @@ const fastConfirmationTest =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -556,21 +501,42 @@ const fastConfirmationTest =
                 );
               }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_epoch_observed_justified_checkpoint) {
-              // }
+              const fcrStore = chain.forkChoice.getFastConfirmationStore();
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_epoch_observed_justified_checkpoint) {
-              // }
+              if (step.checks.previous_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_observed_justified_checkpoint,
+                  `Invalid previous epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_slot_head) {
-              // }
+              if (step.checks.current_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.currentEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.current_epoch_observed_justified_checkpoint,
+                  `Invalid current epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_slot_head) {
-              // }
+              if (step.checks.previous_epoch_greatest_unrealized_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochGreatestUnrealizedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_greatest_unrealized_checkpoint,
+                  `Invalid previous epoch greatest unrealized checkpoint at step ${i}`
+                );
+              }
+
+              if (step.checks.previous_slot_head) {
+                expect(fcrStore.previousSlotHead).toEqualWithMessage(
+                  step.checks.previous_slot_head,
+                  `Invalid previous slot head at step ${i}`
+                );
+              }
+
+              if (step.checks.current_slot_head) {
+                expect(fcrStore.currentSlotHead).toEqualWithMessage(
+                  step.checks.current_slot_head,
+                  `Invalid current slot head at step ${i}`
+                );
+              }
 
               if (step.checks.confirmed_root) {
                 expect(confirmedRoot).toEqualWithMessage(
@@ -579,11 +545,18 @@ const fastConfirmationTest =
                 );
               }
 
+              if (step.checks.safe_execution_block_hash !== undefined) {
+                expect(getSafeExecutionBlockHash(chain.forkChoice)).toEqualWithMessage(
+                  step.checks.safe_execution_block_hash,
+                  `Invalid safe execution block hash at step ${i}`
+                );
+              }
+
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {
@@ -673,25 +646,6 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
-          // and these tests are failing until we update our implementation.
-          name.includes("voting_source_beyond_two_epoch") ||
-          name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
-          // TODO: lodestar's fast-confirmation rule (FCR) needs a broader overhaul. These two
-          // is_one_confirmed cases (new in v1.7.0-alpha.12, present in electra + fulu) currently
-          // fail. Unskip once the FCR is reworked.
-          name.includes("is_one_confirmed_fails_large_validator_slashed") ||
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot"),
       },
     };
   };
@@ -779,9 +733,12 @@ type Checks = {
 
     previous_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
     current_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
+    previous_epoch_greatest_unrealized_checkpoint?: SpecTestCheckpoint;
     previous_slot_head?: string;
     current_slot_head?: string;
     confirmed_root?: string;
+    /** Expected response of `get_safe_execution_block_hash()`. New in Bellatrix. */
+    safe_execution_block_hash?: string;
 
     // Custom attributes
     get_proposer_head?: string;
@@ -807,6 +764,29 @@ type FastConfirmationTestCase = {
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
+
+/**
+ * Attestation steps following a tick must reach fork choice before it, so that its attestation
+ * queue applies them at the tick, ahead of the fast confirmation rule that runs there.
+ * Indices are returned so assertion messages keep the `steps.yaml` numbering.
+ */
+function getExecutionOrder(steps: Step[]): number[] {
+  const order: number[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (!isTick(steps[i])) {
+      order.push(i);
+      continue;
+    }
+    let next = i + 1;
+    while (next < steps.length && isAttestation(steps[next])) {
+      order.push(next);
+      next++;
+    }
+    order.push(i);
+    i = next - 1;
+  }
+  return order;
+}
 
 function isTick(step: Step): step is OnTick {
   return (step as OnTick).tick >= 0;
@@ -836,6 +816,10 @@ function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
-});
+specTestIterator(
+  path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
+  {
+    fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
+  },
+  defaultSkipOpts
+);
