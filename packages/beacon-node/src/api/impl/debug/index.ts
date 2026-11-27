@@ -49,6 +49,7 @@ export function getDebugApi({
           slot: block.slot,
           root: block.blockRoot,
           executionOptimistic: isOptimisticBlock(block),
+          payloadStatus: block.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
         })),
       };
     },
