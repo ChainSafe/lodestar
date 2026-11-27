@@ -535,8 +535,9 @@ export function getBeaconBlockApi(
               if (isOptimisticBlock(summary)) {
                 executionOptimistic = true;
               }
-              // Block from hot db which only contains unfinalized blocks
-              finalized = false;
+              if (!blockResult.finalized) {
+                finalized = false;
+              }
             }
           })
         );
@@ -578,12 +579,12 @@ export function getBeaconBlockApi(
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
-            finalized = false;
 
             if (summary.blockRoot !== canonicalRoot) {
               const blockResult = await chain.getBlockByRoot(summary.blockRoot);
               if (blockResult) {
                 result.push(toBeaconHeaderResponse(config, blockResult.block));
+                finalized = false;
               }
             }
           })

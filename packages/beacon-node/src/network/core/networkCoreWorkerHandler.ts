@@ -75,8 +75,12 @@ export class WorkerNetworkCore implements INetworkCore {
   private readonly reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 
   constructor(private readonly modules: WorkerNetworkCoreModules) {
-    // Get called from main thread to issue a ReqResp request, and emits event to worker
-    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(getReqRespBridgeReqEvents(this.reqRespBridgeEventBus));
+    // Get called from main thread to issue a ReqResp request, and emits event to worker. Unbounded: we
+    // buffer the whole response into an array anyway, so pacing the worker only risks a read buffer overflow
+    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(
+      getReqRespBridgeReqEvents(this.reqRespBridgeEventBus),
+      Infinity
+    );
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),

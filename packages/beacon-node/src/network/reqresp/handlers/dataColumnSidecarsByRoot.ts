@@ -19,7 +19,7 @@ export async function* onDataColumnSidecarsByRoot(
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  // SPEC: minimum_request_epoch = max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH)
+  // SPEC: minimum_request_epoch = max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
   const minimumRequestEpoch = Math.max(
     getBlobDataRetentionStartEpoch(chain.config, currentEpoch),

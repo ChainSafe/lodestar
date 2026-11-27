@@ -42,10 +42,11 @@ export interface IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult>;
 
-  getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
+  getPayload(fork: ForkName, payloadId: PayloadId, signal?: AbortSignal): Promise<GetPayloadResult>;
 
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 

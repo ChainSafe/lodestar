@@ -145,7 +145,7 @@ pub fn processBlock(
             try gloas_withdrawals.getExpectedWithdrawals(fork, epoch_cache, state, &result);
             try gloas_withdrawals.processWithdrawals(fork, state, &result);
         }
-        try processExecutionPayloadBid(fork, allocator, config, epoch_cache, state, &body.inner.signed_execution_payload_bid);
+        try processExecutionPayloadBid(fork, allocator, config, epoch_cache, state, &body.inner.signed_execution_payload_bid, opts.verify_signature);
     }
 
     timer = time.start(io);

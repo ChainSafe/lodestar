@@ -431,6 +431,19 @@ export class Batch {
   }
 
   /**
+   * How many failed processing/execution attempts each peer took part in, peer-attributable or not
+   */
+  getTriedPeerCounts(): Map<PeerIdStr, number> {
+    const counts = new Map<PeerIdStr, number>();
+    for (const attempt of [...this.failedProcessingAttempts, ...this.executionErrorAttempts]) {
+      for (const peer of attempt.peers) {
+        counts.set(peer, (counts.get(peer) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+
+  /**
    * True only if the peer has already returned a successful response for the current request.
    * A by_range success may update `this.requests` to parent_payload, and the same peer is then
    * still eligible for the newly discovered parent payload data.

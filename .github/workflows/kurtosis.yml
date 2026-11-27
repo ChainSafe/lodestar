@@ -8,8 +8,18 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    name: Build and run Kurtosis
+    name: Build and run Kurtosis (${{ matrix.name }})
     runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: lodestar and lighthouse
+            id: mixed
+            config: .github/workflows/assets/kurtosis_sim_test_config.yaml
+          - name: gloas and heze forks
+            id: forks
+            config: .github/workflows/assets/kurtosis_fork_transition_config.yaml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -24,4 +34,5 @@ jobs:
       - name: Run test
         uses: ethpandaops/kurtosis-assertoor-github-action@f64942cbc780df731a731ea9f45765b161d2c8df # v1.0.1
         with:
-          ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"
+          ethereum_package_args: ${{ matrix.config }}
+          enclave_name: gh-${{ github.run_id }}-${{ matrix.id }}

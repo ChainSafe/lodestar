@@ -28,21 +28,15 @@ test "application policy bounds validator-driven work and execution shares" {
     try std.testing.expectError(error.InvalidNetworkConfig, policy.gossip(&invalid));
 }
 
-test "application seen retention covers the longest scheduled slot duration" {
-    for ([_]u64{ 0, 20, std.math.maxInt(u64) }) |epoch| {
-        for ([_]u64{ 6000, 24000 }) |duration_ms| {
-            const configured = config.mainnet.config.chain.merge(.{ .HEZE_FORK_EPOCH = epoch, .SLOT_DURATION_MS_HEZE = duration_ms });
-            const gossip = try policy.gossip(&configured);
-            const max_slot_ms = if (epoch == std.math.maxInt(u64)) 12_000 else @max(12_000, duration_ms);
-            try std.testing.expectEqual(max_slot_ms * p.SLOTS_PER_EPOCH * 2, gossip.seen_ttl_ms);
-            try std.testing.expectEqual(12_000, gossip.score_params.decay_interval_ms);
-        }
+test "application seen retention follows the slot duration" {
+    for ([_]u64{ 6000, 24000 }) |duration_ms| {
+        const configured = config.mainnet.config.chain.merge(.{ .SLOT_DURATION_MS = duration_ms });
+        const gossip = try policy.gossip(&configured);
+        try std.testing.expectEqual(duration_ms * p.SLOTS_PER_EPOCH * 2, gossip.seen_ttl_ms);
     }
-    for ([_]u64{ 0, 20, std.math.maxInt(u64) }) |epoch| {
-        for ([_]u64{ 0, 86_400_001, std.math.maxInt(u64) }) |duration_ms| {
-            const invalid = config.mainnet.config.chain.merge(.{ .HEZE_FORK_EPOCH = epoch, .SLOT_DURATION_MS_HEZE = duration_ms });
-            try std.testing.expectError(error.InvalidNetworkConfig, policy.gossip(&invalid));
-        }
+    for ([_]u64{ 0, 86_400_001, std.math.maxInt(u64) }) |duration_ms| {
+        const invalid = config.mainnet.config.chain.merge(.{ .SLOT_DURATION_MS = duration_ms });
+        try std.testing.expectError(error.InvalidNetworkConfig, policy.gossip(&invalid));
     }
 }
 
