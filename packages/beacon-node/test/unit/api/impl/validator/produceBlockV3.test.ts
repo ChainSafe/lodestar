@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -25,12 +26,15 @@ describe("api/validator - produceBlockV3", () => {
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const parentState = {} as IBeaconStateView;
 
   beforeEach(() => {
     modules = getApiTestModules({config});
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
+    // Production is mocked, the state is only threaded through
+    modules.chain.regen.getBlockSlotState.mockResolvedValue(parentState);
   });
 
   afterEach(() => {
@@ -275,6 +279,8 @@ describe("api/validator - produceBlockV3", () => {
       parentBlock,
       feeRecipient,
       commonBlockBodyPromise: expect.any(Promise),
+      parentState,
+      parentStateWithPayload: parentState,
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
@@ -287,6 +293,8 @@ describe("api/validator - produceBlockV3", () => {
       parentBlock,
       feeRecipient: undefined,
       commonBlockBodyPromise: expect.any(Promise),
+      parentState,
+      parentStateWithPayload: parentState,
     });
   });
 });
