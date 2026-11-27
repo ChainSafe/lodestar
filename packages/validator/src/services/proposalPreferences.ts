@@ -1,6 +1,6 @@
 import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {fromHex, toPubkeyHex} from "@lodestar/utils";
@@ -73,6 +73,11 @@ export class ProposalPreferencesService {
   };
 
   private runPreferencesTask = async (slot: Slot): Promise<void> => {
+    // Peers ignore preferences before genesis as the proposer lookahead only starts at genesis
+    if (slot < GENESIS_SLOT) {
+      return;
+    }
+
     // Start running in the epoch before the fork so builders can prepare bids for the first Gloas slots
     const currentEpoch = computeEpochAtSlot(slot);
     if (!isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(currentEpoch + 1)))) {
