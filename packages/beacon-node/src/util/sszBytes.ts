@@ -702,13 +702,20 @@ const WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
  * Returns null on malformed offsets, deserialization reports the exact error.
  */
 export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): number | null {
-  if (data.length < WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4) {
+  const delta = signatureSizeDelta(data);
+  if (data.length < delta + WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4) {
     return null;
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const transactionsOffset = view.getUint32(TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
-  const withdrawalsOffset = view.getUint32(WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  const transactionsOffset = view.getUint32(
+    delta + TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
+    true
+  );
+  const withdrawalsOffset = view.getUint32(
+    delta + WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
+    true
+  );
   if (transactionsOffset > withdrawalsOffset) {
     return null;
   }
@@ -716,7 +723,7 @@ export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: 
     return 0;
   }
 
-  const transactionsStart = PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
+  const transactionsStart = delta + PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
   if (transactionsStart + 4 > data.length) {
     return null;
   }

@@ -604,17 +604,19 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
     }
   });
 
-  for (const count of [0, 1, 3, 1000]) {
-    it(`getTransactionCountFromExecutionPayloadEnvelopeSerialized - ${count} transactions`, () => {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.payload.extraData = new Uint8Array(5);
-      envelope.message.payload.transactions = SerializedList.fromArray(
-        Array.from({length: count}, (_, i) => new Uint8Array(i + 1))
-      );
-      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+  for (const fork of ["gloas", "pq"] as const) {
+    for (const count of [0, 1, 3, 1000]) {
+      it(`getTransactionCountFromExecutionPayloadEnvelopeSerialized - ${fork} ${count} transactions`, () => {
+        const envelope = ssz[fork].SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.payload.extraData = new Uint8Array(5);
+        envelope.message.payload.transactions = SerializedList.fromArray(
+          Array.from({length: count}, (_, i) => new Uint8Array(i + 1))
+        );
+        const bytes = ssz[fork].SignedExecutionPayloadEnvelope.serialize(envelope);
 
-      expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(count);
-    });
+        expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(count);
+      });
+    }
   }
 
   it("getTransactionCountFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
