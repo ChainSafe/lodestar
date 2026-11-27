@@ -21,14 +21,20 @@ test "Heze fork activation and inclusion list domains" {
     try std.testing.expect(!std.mem.eql(u8, domain, try config.domain_cache.get(.gloas, domain_type)));
 }
 
-test "Heze timing derives from the slot duration" {
-    const config = BeaconConfig.init(@import("networks/mainnet.zig").chain_config, @splat(0));
-    try std.testing.expectEqual(12000, config.getSlotDurationMs(.gloas));
-    try std.testing.expectEqual(12000, config.getSlotDurationMs(.heze));
-    try std.testing.expectEqual(3000, config.getAttestationDueMs(.gloas));
-    try std.testing.expectEqual(3000, config.getAttestationDueMs(.heze));
-    try std.testing.expectEqual(9000, config.getInclusionListDueMs(.heze));
-    try std.testing.expectEqual(2000, config.getProposerReorgCutoffMs(.heze));
+test "slot component durations derive from the slot duration" {
+    const mainnet = @import("networks/mainnet.zig").chain_config;
+    // slot duration, attestation due, gloas attestation due, proposer reorg cutoff, inclusion list due
+    inline for (.{
+        .{ 12000, 4000, 3000, 2000, 9000 },
+        .{ 6000, 2000, 1500, 1000, 4500 },
+    }) |case| {
+        const config = BeaconConfig.init(mainnet.merge(.{ .SLOT_DURATION_MS = case[0] }), @splat(0));
+        try std.testing.expectEqual(case[0], config.getSlotDurationMs(.fulu));
+        try std.testing.expectEqual(case[1], config.getAttestationDueMs(.fulu));
+        try std.testing.expectEqual(case[2], config.getAttestationDueMs(.gloas));
+        try std.testing.expectEqual(case[3], config.getProposerReorgCutoffMs(.fulu));
+        try std.testing.expectEqual(case[4], config.getInclusionListDueMs(.heze));
+    }
 }
 
 test "getDomain matches independently computed domain bytes" {

@@ -12,13 +12,9 @@ export function getSlotDurations(config: ChainConfig): [Epoch, number][] {
 }
 
 /** Slot duration in ms in effect at a given epoch */
-export function getSlotDurationMsAtEpoch(
-  config: ChainConfig,
-  epoch: Epoch,
-  slotDurations = getSlotDurations(config)
-): number {
+export function getSlotDurationMsAtEpoch(config: ChainConfig, epoch: Epoch): number {
   let slotDurationMs = config.SLOT_DURATION_MS;
-  for (const [forkEpoch, forkSlotDurationMs] of slotDurations) {
+  for (const [forkEpoch, forkSlotDurationMs] of getSlotDurations(config)) {
     if (epoch >= forkEpoch) {
       slotDurationMs = forkSlotDurationMs;
     }
@@ -31,15 +27,10 @@ export function getSlotDurationMs(config: ChainForkConfig, slot: Slot): number {
   return config.getSlotDurationMs(config.getForkName(slot));
 }
 
-export function computeTimeAtSlotMs(
-  config: ChainConfig,
-  slot: Slot,
-  genesisTimeMs: number,
-  slotDurations = getSlotDurations(config)
-): number {
+export function computeTimeAtSlotMs(config: ChainConfig, slot: Slot, genesisTimeMs: number): number {
   let endSlot = slot;
   let timeMs = genesisTimeMs;
-  for (const [forkEpoch, slotDurationMs] of slotDurations.toReversed()) {
+  for (const [forkEpoch, slotDurationMs] of getSlotDurations(config).reverse()) {
     const forkSlot = computeStartSlotAtEpoch(forkEpoch);
     if (forkSlot < endSlot) {
       timeMs += (endSlot - forkSlot) * slotDurationMs;
@@ -47,25 +38,20 @@ export function computeTimeAtSlotMs(
     }
   }
   // Pre-genesis slots extrapolate linearly so the clock keeps ticking before genesis
-  return timeMs + (endSlot - GENESIS_SLOT) * getSlotDurationMsAtEpoch(config, GENESIS_EPOCH, slotDurations);
+  return timeMs + (endSlot - GENESIS_SLOT) * getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
 }
 
 export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: TimeSeconds): TimeSeconds {
   return computeTimeAtSlotMs(config, slot, genesisTime * 1000) / 1000;
 }
 
-export function computeSlotAtTimeMs(
-  config: ChainConfig,
-  timeMs: number,
-  genesisTimeMs: number,
-  slotDurations = getSlotDurations(config)
-): Slot {
+export function computeSlotAtTimeMs(config: ChainConfig, timeMs: number, genesisTimeMs: number): Slot {
   let startSlot = GENESIS_SLOT;
   let startTimeMs = genesisTimeMs;
-  let slotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH, slotDurations);
-  for (const [forkEpoch, forkSlotDurationMs] of slotDurations) {
+  let slotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
+  for (const [forkEpoch, forkSlotDurationMs] of getSlotDurations(config)) {
     const forkSlot = computeStartSlotAtEpoch(forkEpoch);
-    const forkTimeMs = computeTimeAtSlotMs(config, forkSlot, genesisTimeMs, slotDurations);
+    const forkTimeMs = computeTimeAtSlotMs(config, forkSlot, genesisTimeMs);
     if (timeMs >= forkTimeMs) {
       startSlot = forkSlot;
       startTimeMs = forkTimeMs;
@@ -87,17 +73,13 @@ export function getCurrentSlot(config: ChainConfig, genesisTime: TimeSeconds): S
  * Start epoch of the blob data retention window, preserving its wall-clock length
  * across slot duration changes
  */
-export function getBlobDataRetentionStartEpoch(
-  config: ChainConfig,
-  epoch: Epoch,
-  slotDurations = getSlotDurations(config)
-): Epoch {
+export function getBlobDataRetentionStartEpoch(config: ChainConfig, epoch: Epoch): Epoch {
   const windowMs = config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS * SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
-  const currentStartMs = computeTimeAtSlotMs(config, computeStartSlotAtEpoch(epoch), 0, slotDurations);
+  const currentStartMs = computeTimeAtSlotMs(config, computeStartSlotAtEpoch(epoch), 0);
   if (currentStartMs < windowMs) {
     return GENESIS_EPOCH;
   }
-  return computeEpochAtSlot(computeSlotAtTimeMs(config, currentStartMs - windowMs, 0, slotDurations));
+  return computeEpochAtSlot(computeSlotAtTimeMs(config, currentStartMs - windowMs, 0));
 }
 
 export function computeSlotsSinceEpochStart(slot: Slot, epoch?: Epoch): Slot {
