@@ -791,7 +791,7 @@ export class LightClientServer {
       if (!bestData || !attestedData) {
         continue;
       }
-      if (stored && isSameStoredUpdate(stored, bestData)) {
+      if (stored && isSameServedUpdate(stored, bestData, attestedData)) {
         continue;
       }
 
@@ -936,15 +936,20 @@ export class LightClientServer {
 }
 
 /**
- * Whether `stored` was derived from the same block and signature as `bestData`.
+ * Whether `stored` is the update built from the sync aggregate of `signatureData` attesting to
+ * `attestedData`.
  *
  * Summaries cannot identify an update: two branches can produce identical ones while only one is
  * canonical, and `is_better_update` cannot be used here since it prefers higher participation.
  */
-function isSameStoredUpdate(stored: LightClientUpdate, bestData: BlockLightClientCache): boolean {
+function isSameServedUpdate(
+  stored: LightClientUpdate,
+  signatureData: BlockLightClientCache,
+  attestedData: BlockLightClientCache
+): boolean {
   return (
-    stored.signatureSlot === bestData.signatureSlot &&
-    ssz.phase0.BeaconBlockHeader.equals(stored.attestedHeader.beacon, bestData.attestedHeader.beacon)
+    stored.signatureSlot === signatureData.signatureSlot &&
+    ssz.phase0.BeaconBlockHeader.equals(stored.attestedHeader.beacon, attestedData.attestedHeader.beacon)
   );
 }
 

@@ -429,6 +429,27 @@ describe("LightClientServer.updateHead", () => {
     expect(putBestUpdate).not.toHaveBeenCalled();
   });
 
+  it("does not rewrite the served update when the head is reported again", async () => {
+    const attestedSlot = SLOTS_PER_EPOCH + 4;
+    const chain = chainOf([attestedSlot, attestedSlot + 1]);
+    const {server, putBestUpdate} = createServer(null);
+    let served: LightClientUpdate | null = null;
+    const db = server["db"].bestLightClientUpdate as unknown as {get: unknown};
+    db.get = vi.fn(async () => served);
+    putBestUpdate.mockImplementation(async (_period: number, update: LightClientUpdate) => {
+      served = update;
+    });
+    setBlockData(server, chain);
+    const head = blockAt(chain, attestedSlot + 1).blockRoot;
+    const finalizedCheckpoint = {epoch: 0, root: new Uint8Array(32)};
+
+    await server.updateHead(head, finalizedCheckpoint);
+    expect(putBestUpdate).toHaveBeenCalledTimes(1);
+
+    await server.updateHead(head, finalizedCheckpoint);
+    expect(putBestUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("bounds the cache on import, without updateHead", async () => {
     const {server} = createServer(null);
     const blockSlot = gloasSlot + MAX_CACHED_SLOTS + 16;
