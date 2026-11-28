@@ -158,7 +158,8 @@ type NativeScores = {weights: BigUint64Array; attestationScores: BigUint64Array;
  *   before it
  */
 export class NativeForkChoice implements IForkChoice {
-  private readonly store: NativeStore;
+  /** Native services may read this store. Mutations must use this adapter to keep its node mirror current. */
+  readonly store: NativeStore;
   /** By node id. A pre-Gloas block has its single FULL variant in the PENDING slot */
   private nodes: (ProtoBlock | undefined)[] = [];
   /** By block index: the node id the block hangs from, undefined for the root block */

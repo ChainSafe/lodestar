@@ -14,13 +14,17 @@ import {
   RegenFnName,
   StateRegenerationOpts,
 } from "./interface.js";
-import {RegenModules, StateRegenerator} from "./regen.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 // TODO: Should this constant be lower than above? 256 feels high
 const REGEN_CAN_ACCEPT_WORK_THRESHOLD = 16;
 
-type QueuedStateRegeneratorModules = RegenModules & {
+type QueuedStateRegeneratorModules = {
+  forkChoice: IForkChoice;
+  blockStateCache: BlockStateCache;
+  checkpointStateCache: CheckpointStateCache;
+  metrics: Metrics | null;
+  logger: Logger;
   signal: AbortSignal;
 };
 
@@ -35,7 +39,7 @@ export type RegenRequest = RegenRequestByKey[RegenRequestKey];
  */
 export class QueuedStateRegenerator implements IStateRegenerator {
   readonly jobQueue: JobItemQueue<[RegenRequest], IBeaconStateView>;
-  private readonly regen: StateRegenerator;
+  private readonly regen: IStateRegeneratorInternal;
 
   private readonly forkChoice: IForkChoice;
   private readonly blockStateCache: BlockStateCache;
@@ -43,8 +47,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly metrics: Metrics | null;
   private readonly logger: Logger;
 
-  constructor(modules: QueuedStateRegeneratorModules) {
-    this.regen = new StateRegenerator(modules);
+  constructor(regenerator: IStateRegeneratorInternal, modules: QueuedStateRegeneratorModules) {
+    this.regen = regenerator;
     this.jobQueue = new JobItemQueue<[RegenRequest], IBeaconStateView>(
       this.jobQueueProcessor,
       {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
@@ -143,6 +147,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.onCheckpoint(headStateRoot);
   }
 
+  /** Borrows postState for background checkpoint processing; callers must not release it while that work is pending. */
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
@@ -182,10 +187,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
       // for the new FIFOBlockStateCache, it's important to reload state to regen head state here if needed
       const allowDiskReload = true;
-      this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, allowDiskReload).then(
-        (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
-        (e) => this.logger.error("Error on head state regen", logCtx, e)
-      );
+      this.regen
+        .getState(newHeadStateRoot, RegenCaller.processBlock, allowDiskReload)
+        .then((headStateRegen) => this.blockStateCache.setHeadState(headStateRegen))
+        .catch((e) => this.logger.error("Error on head state regen", logCtx, e));
     }
   }
 

@@ -131,6 +131,12 @@ export async function importBlock(
 
   // 2. Import block to fork choice
 
+  // Native replay must own the bytes before fork choice can expose the block.
+  this.nativeRegen?.addBlock(
+    blockRoot,
+    this.serializedCache.get(block) ?? this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(block)
+  );
+
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
   const importDelayMs = this.clock.msFromSlot(blockSlot);

@@ -42,6 +42,7 @@ export type StateRegenerationOpts = {
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
+  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<IBeaconStateView>;
   dropCache(): Promise<void>;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): IBeaconStateView | null;
@@ -50,7 +51,9 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null;
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
   onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
+  /** Borrows postState for background checkpoint processing; do not release it while that work is pending. */
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
+  /** Borrows item for the call; the checkpoint cache retains its own reference. */
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
@@ -78,6 +81,7 @@ export interface IStateRegeneratorInternal {
 
   /**
    * Return the exact state with `stateRoot`
+   * Internal recovery callers may opt into checkpoint disk reload.
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<IBeaconStateView>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller, allowDiskReload?: boolean): Promise<IBeaconStateView>;
 }

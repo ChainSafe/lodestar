@@ -51,9 +51,13 @@ pub const StateOrLoadedBytes = union(enum) {
     }
 };
 
-/// Serialize entire calls, including I/O, against cache mutation and destruction.
+/// Every public method holds `mutex` for the whole call, including file I/O.
+/// Private `*Locked` methods require the caller to hold it; `std.Io.Mutex` is not reentrant.
+/// Lock order: this mutex before BlockStateCache.mutex (seed lookup nests them).
+/// The owner must stop all callers before deinit.
 /// Resident snapshots are immutable; clone before mutation.
-/// Config, pool, shared caches and allocator backing must outlive every StateRc.
+/// Config, pool and allocator backing must outlive every StateRc.
+/// State operations require the shared pubkey cache; destruction does not use it.
 /// One cache owns its filesystem directory.
 pub const PersistentCheckpointStateCache = struct {
     const Self = @This();
@@ -87,6 +91,18 @@ pub const PersistentCheckpointStateCache = struct {
         failed_epochs: u64 = 0,
     };
 
+    pub const StatsSnapshot = struct {
+        counters: Stats,
+        in_memory: usize,
+        persisted: usize,
+    };
+
+    pub const CheckpointInfo = struct {
+        cp: Checkpoint,
+        in_memory: bool,
+    };
+
+    mutex: std.Io.Mutex = .init,
     allocator: Allocator,
     store: FileStore,
     block_state_cache: *BlockStateCache,
@@ -118,6 +134,8 @@ pub const PersistentCheckpointStateCache = struct {
     /// Call once, after optional startup recovery has read the previous run's files.
     /// Anchor insertion may precede this call; previous-run files are never admitted.
     pub fn initStore(self: *Self, io: std.Io) (FileStore.InitError || FileStore.ReadKeysError || FileStore.RemoveError || error{AlreadyInitialized})!void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         if (self.initialized) return error.AlreadyInitialized;
         try self.store.initStore(io);
         const keys = try self.store.readKeys(io, self.allocator);
@@ -146,6 +164,8 @@ pub const PersistentCheckpointStateCache = struct {
     /// permitting a mid-epoch startup anchor without advancing or mutating it.
     /// Flat-retention removals are queued; the coordinator must drainPendingDeletes().
     pub fn add(self: *Self, io: std.Io, cp: Checkpoint, state: *StateRc) CacheError!void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const slot = state.get().state.slot() catch return error.InvalidState;
         if (cp.epoch > std.math.maxInt(u64) / slots_per_epoch or cp.epoch != st.computeCheckpointEpochAtStateSlot(slot))
             return error.InvalidCheckpoint;
@@ -189,13 +209,16 @@ pub const PersistentCheckpointStateCache = struct {
         return entry;
     }
 
-    /// Borrows until eviction, replacement, clear or destruction. Use ref() across those boundaries.
-    pub fn get(self: *Self, io: std.Io, cp: Checkpoint) ?*CachedBeaconState {
-        const state = (self.lookup(io, cp) orelse return null).state orelse return null;
-        return state.get();
+    /// Locks even though it only reads: `add` can grow the map and move its storage,
+    /// and `persist`/`removeEntry` can null and unref `entry.state` between the lookup
+    /// and the ref. Atomic stats alone would not prevent either race.
+    pub fn ref(self: *Self, io: std.Io, cp: Checkpoint) ?*StateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.refLocked(io, cp);
     }
 
-    pub fn ref(self: *Self, io: std.Io, cp: Checkpoint) ?*StateRc {
+    fn refLocked(self: *Self, io: std.Io, cp: Checkpoint) ?*StateRc {
         const state = (self.lookup(io, cp) orelse return null).state orelse return null;
         return state.ref();
     }
@@ -213,24 +236,14 @@ pub const PersistentCheckpointStateCache = struct {
         return if (latest) |epoch| .{ .epoch = epoch, .root = root } else null;
     }
 
-    pub fn getLatest(self: *Self, io: std.Io, root: Root, max_epoch: ?Epoch) ?*CachedBeaconState {
-        var bound = max_epoch;
-        var remaining = self.epoch_index.count();
-        while (remaining > 0) : (remaining -= 1) {
-            const cp = self.latestCheckpoint(root, bound) orelse return null;
-            if (self.get(io, cp)) |state| return state;
-            if (cp.epoch == 0) break;
-            bound = cp.epoch - 1;
-        }
-        return null;
-    }
-
     pub fn refLatest(self: *Self, io: std.Io, root: Root, max_epoch: ?Epoch) ?*StateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         var bound = max_epoch;
         var remaining = self.epoch_index.count();
         while (remaining > 0) : (remaining -= 1) {
             const cp = self.latestCheckpoint(root, bound) orelse return null;
-            if (self.ref(io, cp)) |state| return state;
+            if (self.refLocked(io, cp)) |state| return state;
             if (cp.epoch == 0) break;
             bound = cp.epoch - 1;
         }
@@ -273,36 +286,46 @@ pub const PersistentCheckpointStateCache = struct {
         return null;
     }
 
-    pub fn findSeedStateToReload(self: *Self, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*CachedBeaconState {
-        if (try self.findSeed(cp)) |seed| return seed.get();
-        return self.block_state_cache.getSeedState();
+    pub fn refSeedStateToReload(self: *Self, io: std.Io, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.refSeedStateToReloadLocked(io, cp);
     }
 
-    pub fn refSeedStateToReload(self: *Self, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
+    fn refSeedStateToReloadLocked(self: *Self, io: std.Io, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
         if (try self.findSeed(cp)) |seed| return seed.ref();
-        return self.block_state_cache.refSeedState();
+        return self.block_state_cache.refSeedState(io);
     }
 
-    pub fn updatePreComputedCheckpoint(self: *Self, cp: Checkpoint) ?u64 {
+    pub fn updatePreComputedCheckpoint(self: *Self, io: std.Io, cp: Checkpoint) ?u64 {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const previous = self.precomputed_hits;
         self.precomputed_checkpoint = key.datastoreKey(cp);
         self.precomputed_hits = 0;
         return previous;
     }
 
-    pub fn onCheckpoint(self: *Self, finalized_epoch: Epoch, justified_epoch: Epoch) void {
+    pub fn onCheckpoint(self: *Self, io: std.Io, finalized_epoch: Epoch, justified_epoch: Epoch) void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         self.finalized_epoch = finalized_epoch;
         self.justified_epoch = justified_epoch;
     }
 
     /// Every successful result owns one reference, including a resident hit.
-    /// Serialize the entire call, including file I/O, against cache mutation and destruction.
     pub fn getOrReload(self: *Self, io: std.Io, cp: Checkpoint) ReloadError!?*StateRc {
-        if (self.ref(io, cp)) |state| return state;
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.getOrReloadLocked(io, cp);
+    }
+
+    fn getOrReloadLocked(self: *Self, io: std.Io, cp: Checkpoint) ReloadError!?*StateRc {
+        if (self.refLocked(io, cp)) |state| return state;
         const entry = self.cache.getPtr(key.datastoreKey(cp)) orelse return null;
         std.debug.assert(entry.state == null);
         std.debug.assert(entry.persisted_key != null);
-        const seed = (try self.refSeedStateToReload(cp)) orelse return error.NoSeedState;
+        const seed = (try self.refSeedStateToReloadLocked(io, cp)) orelse return error.NoSeedState;
         defer seed.unref();
         const state_bytes = (try self.store.read(io, self.allocator, entry.persisted_key.?, .limited(self.max_state_bytes))) orelse return null;
         defer self.allocator.free(state_bytes);
@@ -328,12 +351,14 @@ pub const PersistentCheckpointStateCache = struct {
     /// Like TS, latest lookup skips unusable candidates, including NoSeedState.
     /// Direct getOrReload still reports NoSeedState. Resource failures propagate.
     pub fn getOrReloadLatest(self: *Self, io: std.Io, root: Root, max_epoch: ?Epoch) ReloadLatestError!?*StateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         var bound = max_epoch;
         // Each attempt strictly decreases the epoch, bounded by the tracked epoch count.
         var remaining = self.epoch_index.count();
         while (remaining > 0) : (remaining -= 1) {
             const cp = self.latestCheckpoint(root, bound) orelse return null;
-            const state = self.getOrReload(io, cp) catch |err| switch (err) {
+            const state = self.getOrReloadLocked(io, cp) catch |err| switch (err) {
                 error.OutOfMemory => return error.OutOfMemory,
                 error.PoolExhausted => return error.PoolExhausted,
                 error.Canceled => return error.Canceled,
@@ -347,7 +372,13 @@ pub const PersistentCheckpointStateCache = struct {
     }
 
     pub fn getStateOrLoadDb(self: *Self, io: std.Io, allocator: Allocator, cp: Checkpoint) FileStore.ReadError!?StateOrLoadedBytes {
-        if (self.ref(io, cp)) |state| return .{ .state = state };
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.getStateOrLoadDbLocked(io, allocator, cp);
+    }
+
+    fn getStateOrLoadDbLocked(self: *Self, io: std.Io, allocator: Allocator, cp: Checkpoint) FileStore.ReadError!?StateOrLoadedBytes {
+        if (self.refLocked(io, cp)) |state| return .{ .state = state };
         const entry = self.cache.get(key.datastoreKey(cp)) orelse return null;
         std.debug.assert(entry.state == null);
         std.debug.assert(entry.persisted_key != null);
@@ -357,7 +388,9 @@ pub const PersistentCheckpointStateCache = struct {
     }
 
     pub fn getStateOrBytes(self: *Self, io: std.Io, allocator: Allocator, cp: Checkpoint) FileStore.ReadError!?StateOrBytes {
-        const data = (try self.getStateOrLoadDb(io, allocator, cp)) orelse return null;
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        const data = (try self.getStateOrLoadDbLocked(io, allocator, cp)) orelse return null;
         return switch (data) {
             .state => |state| .{ .state = state },
             .loaded => |loaded| .{ .bytes = loaded.bytes },
@@ -475,8 +508,14 @@ pub const PersistentCheckpointStateCache = struct {
     }
 
     /// Attempts each queued key once, retaining failures for retry and returning the
-    /// first error after the pass. Cancellation stops immediately. Never overlap drains.
+    /// first error after the pass. Cancellation stops immediately.
     pub fn drainPendingDeletes(self: *Self, io: std.Io) PruneError!void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.drainPendingDeletesLocked(io);
+    }
+
+    fn drainPendingDeletesLocked(self: *Self, io: std.Io) PruneError!void {
         var first_error: ?PruneError = null;
         var remaining = self.pending_deletes.count();
         while (remaining > 0) : (remaining -= 1) {
@@ -494,12 +533,20 @@ pub const PersistentCheckpointStateCache = struct {
     /// Removes logical entries before deleting files. Failed deletes remain queued
     /// for a later drainPendingDeletes() call.
     pub fn clear(self: *Self, io: std.Io) PruneError!void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         while (self.epoch_index.count() > 0) self.removeEpoch(self.epoch_index.keys()[0]);
-        try self.drainPendingDeletes(io);
+        try self.drainPendingDeletesLocked(io);
     }
 
     /// Queues finalized files for deletion without performing I/O.
-    pub fn queueFinalizedPrune(self: *Self, finalized_epoch: Epoch) void {
+    pub fn queueFinalizedPrune(self: *Self, io: std.Io, finalized_epoch: Epoch) void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        self.queueFinalizedPruneLocked(finalized_epoch);
+    }
+
+    fn queueFinalizedPruneLocked(self: *Self, finalized_epoch: Epoch) void {
         var i: usize = 0;
         while (i < self.epoch_index.count()) {
             const epoch = self.epoch_index.keys()[i];
@@ -508,13 +555,25 @@ pub const PersistentCheckpointStateCache = struct {
     }
 
     pub fn pruneFinalized(self: *Self, io: std.Io, finalized_epoch: Epoch) PruneError!void {
-        self.queueFinalizedPrune(finalized_epoch);
-        try self.drainPendingDeletes(io);
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.pruneFinalizedLocked(io, finalized_epoch);
+    }
+
+    fn pruneFinalizedLocked(self: *Self, io: std.Io, finalized_epoch: Epoch) PruneError!void {
+        self.queueFinalizedPruneLocked(finalized_epoch);
+        try self.drainPendingDeletesLocked(io);
     }
 
     /// Caller owns the ascending snapshot. Retention counts tracked epochs, including
     /// persisted ones; max_epoch prevents an old processed state from pruning the future.
-    pub fn getEpochsToPersist(self: *const Self, allocator: Allocator, max_epoch: Epoch) Allocator.Error![]Epoch {
+    pub fn getEpochsToPersist(self: *Self, io: std.Io, allocator: Allocator, max_epoch: Epoch) Allocator.Error![]Epoch {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.getEpochsToPersistLocked(allocator, max_epoch);
+    }
+
+    fn getEpochsToPersistLocked(self: *const Self, allocator: Allocator, max_epoch: Epoch) Allocator.Error![]Epoch {
         var eligible: usize = 0;
         for (self.epoch_index.keys()) |epoch| if (epoch <= max_epoch) {
             eligible += 1;
@@ -556,7 +615,13 @@ pub const PersistentCheckpointStateCache = struct {
 
     /// Applies memory-only branch selection and returns checkpoints needing writes.
     /// Caller frees the slice. processState performs the selected writes.
-    pub fn preparePastEpoch(self: *Self, allocator: Allocator, block_root: Root, state: *CachedBeaconState, epoch: Epoch) ProcessError![]Checkpoint {
+    pub fn preparePastEpoch(self: *Self, io: std.Io, allocator: Allocator, block_root: Root, state: *CachedBeaconState, epoch: Epoch) ProcessError![]Checkpoint {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.preparePastEpochLocked(allocator, block_root, state, epoch);
+    }
+
+    fn preparePastEpochLocked(self: *Self, allocator: Allocator, block_root: Root, state: *CachedBeaconState, epoch: Epoch) ProcessError![]Checkpoint {
         const slot = state.state.slot() catch return error.InvalidState;
         if (epoch > slot / slots_per_epoch) return error.InvalidCheckpoint;
         const boundary = epoch * slots_per_epoch;
@@ -595,7 +660,7 @@ pub const PersistentCheckpointStateCache = struct {
     }
 
     fn processPastEpoch(self: *Self, io: std.Io, block_root: Root, state: *CachedBeaconState, epoch: Epoch) ProcessError!usize {
-        const writes = try self.preparePastEpoch(self.allocator, block_root, state, epoch);
+        const writes = try self.preparePastEpochLocked(self.allocator, block_root, state, epoch);
         defer self.allocator.free(writes);
         var persisted: usize = 0;
         for (writes) |cp| {
@@ -604,22 +669,24 @@ pub const PersistentCheckpointStateCache = struct {
         return persisted;
     }
 
-    /// Runs maintenance without sleeping. The host calls pruneFinalized before its
-    /// slot timer, then calls processState when persistence is due (~67% of the slot).
-    /// Retains the supplied snapshot across pruning and storage calls.
+    /// Runs finalized pruning, persistence, and pending file deletions without sleeping.
+    /// Borrows state and retains it internally across pruning and storage calls.
+    /// The caller keeps its reference on success and failure.
     /// Ordinary delete failures are recorded and retried without blocking writes or
     /// losing their count. Cancellation propagates.
     pub fn processState(self: *Self, io: std.Io, block_root: Root, state: *StateRc) ProcessError!usize {
         const retained = state.ref();
         defer retained.unref();
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         var finalized: Checkpoint = undefined;
         state.get().state.finalizedCheckpoint(&finalized) catch return error.InvalidState;
-        self.pruneFinalized(io, finalized.epoch) catch |err| switch (err) {
+        self.pruneFinalizedLocked(io, finalized.epoch) catch |err| switch (err) {
             error.Canceled => return err,
             else => {},
         };
         const slot = state.get().state.slot() catch return error.InvalidState;
-        const epochs = try self.getEpochsToPersist(self.allocator, slot / slots_per_epoch);
+        const epochs = try self.getEpochsToPersistLocked(self.allocator, slot / slots_per_epoch);
         defer self.allocator.free(epochs);
         var persisted: usize = 0;
         for (epochs) |epoch| {
@@ -632,14 +699,16 @@ pub const PersistentCheckpointStateCache = struct {
                 },
             };
         }
-        self.drainPendingDeletes(io) catch |err| switch (err) {
+        self.drainPendingDeletesLocked(io) catch |err| switch (err) {
             error.Canceled => return err,
             else => {},
         };
         return persisted;
     }
 
-    pub fn dumpSummary(self: *const Self, allocator: Allocator) Allocator.Error![]StateCacheItem {
+    pub fn dumpSummary(self: *Self, io: std.Io, allocator: Allocator) Allocator.Error![]StateCacheItem {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const summary = try allocator.alloc(StateCacheItem, self.cache.count());
         for (self.cache.keys(), self.cache.values(), summary) |dk, entry, *out| {
             const cp = key.checkpointFromDatastoreKey(dk);
@@ -648,29 +717,33 @@ pub const PersistentCheckpointStateCache = struct {
         return summary;
     }
 
-    pub fn dumpCheckpointKeys(self: *const Self, allocator: Allocator) Allocator.Error![]Checkpoint {
+    pub fn dumpCheckpointKeys(self: *Self, io: std.Io, allocator: Allocator) Allocator.Error![]Checkpoint {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const keys = try allocator.alloc(Checkpoint, self.cache.count());
         for (self.cache.keys(), keys) |dk, *cp| cp.* = key.checkpointFromDatastoreKey(dk);
         return keys;
     }
 
-    pub const StateIterator = struct {
-        entries: []const Entry,
-        index: usize = 0,
-
-        pub fn next(self: *StateIterator) ?*CachedBeaconState {
-            while (self.index < self.entries.len) {
-                const entry = self.entries[self.index];
-                self.index += 1;
-                if (entry.state) |state| return state.get();
-            }
-            return null;
+    /// Caller frees the slice with `allocator`.
+    pub fn snapshotCheckpoints(self: *Self, io: std.Io, allocator: Allocator) Allocator.Error![]CheckpointInfo {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        const items = try allocator.alloc(CheckpointInfo, self.cache.count());
+        for (self.cache.keys(), self.cache.values(), items) |dk, entry, *item| {
+            item.* = .{ .cp = key.checkpointFromDatastoreKey(dk), .in_memory = entry.state != null };
         }
-    };
+        return items;
+    }
 
-    /// Borrowed iterator, invalidated by the next cache mutation.
-    pub fn getStates(self: *const Self) StateIterator {
-        return .{ .entries = self.cache.values() };
+    pub fn statsSnapshot(self: *Self, io: std.Io) StatsSnapshot {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        var snapshot: StatsSnapshot = .{ .counters = self.stats, .in_memory = 0, .persisted = 0 };
+        for (self.cache.values()) |entry| {
+            if (entry.state != null) snapshot.in_memory += 1 else snapshot.persisted += 1;
+        }
+        return snapshot;
     }
 };
 

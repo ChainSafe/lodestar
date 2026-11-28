@@ -54,6 +54,14 @@ describe("options / beaconNodeOptions", () => {
     );
   });
 
+  it.each([
+    [{}, false],
+    [{"chain.nativeRegen": false}, false],
+    [{"chain.nativeRegen": true}, true],
+  ] as const)("parses native regen selection %j", (args, expected) => {
+    expect(parseBeaconNodeArgs(args as BeaconNodeArgs).chain?.nativeRegen).toBe(expected);
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -197,6 +205,7 @@ describe("options / beaconNodeOptions", () => {
         nHistoricalStatesFileDataStore: true,
         nativeStateTransition: true,
         nativeForkChoice: false,
+        nativeRegen: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,

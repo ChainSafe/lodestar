@@ -81,7 +81,7 @@ export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
 export const CP_STATE_TIER_BASE = 16;
 
 // TODO GLOAS: re-evaluate this timing
-const PROCESS_CHECKPOINT_STATES_BPS = 6667;
+export const PROCESS_CHECKPOINT_STATES_BPS = 6667;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk

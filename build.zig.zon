@@ -424,6 +424,7 @@
                     .fork_types,
                     .state_transition,
                     .fork_choice,
+                    .beacon_node,
                     .hex,
                     .ere_verifier,
                     "zapi:zapi",

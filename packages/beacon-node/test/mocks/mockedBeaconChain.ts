@@ -28,6 +28,7 @@ import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {Clock} from "../../src/util/clock.js";
 import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
+import {getMockedQueuedStateRegenerator} from "./regenMocks.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
@@ -235,7 +236,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,
-      regen: new QueuedStateRegenerator({} as any),
+      regen: getMockedQueuedStateRegenerator(),
       lightClientServer: new LightClientServer({} as any, {} as any),
       bls: {
         verifySignatureSets: vi.fn().mockResolvedValue(true),

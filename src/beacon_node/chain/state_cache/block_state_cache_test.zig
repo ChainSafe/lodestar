@@ -10,6 +10,19 @@ const testing = std.testing;
 const Node = @import("persistent_merkle_tree").Node;
 const TestCachedBeaconState = state_transition.test_utils.TestCachedBeaconState;
 
+/// Single-threaded lookup; the cache keeps its own reference after this returns.
+fn residentState(cache: *BlockStateCache, key: Root) ?*CachedBeaconState {
+    const state = cache.ref(testing.io, key) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
+fn seedState(cache: *BlockStateCache) ?*CachedBeaconState {
+    const state = cache.refSeedState(testing.io) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
 const TestStateFactory = struct {
     allocator: Allocator,
     helper: TestCachedBeaconState,
@@ -80,11 +93,11 @@ test "BlockStateCache add/get and ownership deinit" {
     const key0 = (try s0.get().state.hashTreeRoot()).*;
     try h.cache.add(h.io, s0, false);
 
-    try testing.expectEqual(@as(usize, 1), h.cache.size());
-    try testing.expect(h.cache.get(h.io, key0) == s0.get());
+    try testing.expectEqual(@as(usize, 1), h.cache.size(testing.io));
+    try testing.expect(residentState(&h.cache, key0) == s0.get());
 
     const missing: Root = @splat(0xAB);
-    try testing.expect(h.cache.get(h.io, missing) == null);
+    try testing.expect(residentState(&h.cache, missing) == null);
 }
 
 test "BlockStateCache FIFO head pinning and 2nd-position insert" {
@@ -109,7 +122,7 @@ test "BlockStateCache FIFO head pinning and 2nd-position insert" {
 
     // Order should be: head, b (latest non-head 2nd), a.
     var order_buf: [4]Root = undefined;
-    const order_len = h.cache.dumpKeyOrder(&order_buf);
+    const order_len = h.cache.dumpKeyOrder(testing.io, &order_buf);
     try testing.expectEqual(@as(usize, 3), order_len);
     try testing.expect(std.mem.eql(u8, &order_buf[0], &k_head));
     try testing.expect(std.mem.eql(u8, &order_buf[1], &k_b));
@@ -133,7 +146,7 @@ test "BlockStateCache re-adding the current head as non-head keeps it at head" {
     // Re-adding the resident head as non-head must NOT demote it to 2nd; the head stays at index 0.
     try h.cache.add(h.io, s_head, false);
     var order_buf: [4]Root = undefined;
-    _ = h.cache.dumpKeyOrder(&order_buf);
+    _ = h.cache.dumpKeyOrder(testing.io, &order_buf);
     try testing.expect(std.mem.eql(u8, &order_buf[0], &k_head));
 }
 
@@ -145,14 +158,14 @@ test "BlockStateCache add duplicate-resident path bumps the resident entry's rea
     const s0 = try h.factory.make(60);
     defer s0.unref();
     try h.cache.add(h.io, s0, false);
-    const before = try h.cache.dumpSummary(allocator);
+    const before = try h.cache.dumpSummary(testing.io, allocator);
     defer allocator.free(before);
     try testing.expectEqual(@as(u64, 0), before[0].reads);
 
     const dup = try h.factory.make(60);
     defer dup.unref();
     try h.cache.add(h.io, dup, false);
-    const after = try h.cache.dumpSummary(allocator);
+    const after = try h.cache.dumpSummary(testing.io, allocator);
     defer allocator.free(after);
     try testing.expectEqual(@as(u64, 1), after[0].reads);
 }
@@ -167,20 +180,20 @@ test "BlockStateCache duplicate insertion preserves both owners and the canonica
     const key = (try s0.get().state.hashTreeRoot()).*;
     try h.cache.add(h.io, s0, false);
     try h.cache.add(h.io, s0, false);
-    try testing.expectEqual(@as(usize, 1), h.cache.size());
+    try testing.expectEqual(@as(usize, 1), h.cache.size(testing.io));
 
     const dup = try h.factory.make(60);
     defer dup.unref();
     try h.cache.add(h.io, dup, false);
-    try testing.expectEqual(s0.get(), h.cache.get(h.io, key).?);
+    try testing.expectEqual(s0.get(), residentState(&h.cache, key).?);
     try testing.expectEqual(@as(u64, 60), try dup.get().state.slot());
 
     try h.cache.setHeadState(h.io, dup);
-    try testing.expectEqual(@as(usize, 1), h.cache.size());
+    try testing.expectEqual(@as(usize, 1), h.cache.size(testing.io));
     const retained = h.cache.ref(h.io, key).?;
     defer retained.unref();
     try testing.expectEqual(s0, retained);
-    h.cache.clear();
+    h.cache.clear(testing.io);
     try testing.expectEqual(@as(u64, 60), try s0.get().state.slot());
     try testing.expectEqual(@as(u64, 60), try dup.get().state.slot());
 }
@@ -207,10 +220,10 @@ test "BlockStateCache prune evicts tail, never the just-added key" {
 
     // Order is [k0(head), k2, k1]; max_states == 2 evicts the tail k1. Head k0 stays pinned and
     // the just-added k2 survives.
-    try testing.expectEqual(@as(usize, 2), h.cache.size());
-    try testing.expect(h.cache.get(h.io, k1) == null);
-    try testing.expect(h.cache.get(h.io, k0) != null);
-    try testing.expect(h.cache.get(h.io, k2) != null);
+    try testing.expectEqual(@as(usize, 2), h.cache.size(testing.io));
+    try testing.expect(residentState(&h.cache, k1) == null);
+    try testing.expect(residentState(&h.cache, k0) != null);
+    try testing.expect(residentState(&h.cache, k2) != null);
 }
 
 test "BlockStateCache prune-skip-last-added when max_states == 1" {
@@ -229,19 +242,19 @@ test "BlockStateCache prune-skip-last-added when max_states == 1" {
 
     // prune breaks rather than evict the just-added tail, so the cache transiently holds 2 with
     // max_states == 1. The just-added key must survive.
-    try testing.expectEqual(@as(usize, 2), h.cache.size());
-    try testing.expect(h.cache.get(h.io, k1) != null);
+    try testing.expectEqual(@as(usize, 2), h.cache.size(testing.io));
+    try testing.expect(residentState(&h.cache, k1) != null);
 
     // A subsequent non-head add lets prune evict the older non-head tail (k1) back toward capacity.
     const s2 = try h.factory.make(32);
     defer s2.unref();
     const k2 = (try s2.get().state.hashTreeRoot()).*;
     try h.cache.add(h.io, s2, false);
-    try testing.expect(h.cache.get(h.io, k1) == null);
-    try testing.expect(h.cache.get(h.io, k2) != null);
+    try testing.expect(residentState(&h.cache, k1) == null);
+    try testing.expect(residentState(&h.cache, k2) != null);
 }
 
-test "BlockStateCache getSeedState returns stable first-inserted state, clear removes entries" {
+test "BlockStateCache refSeedState returns stable first-inserted state, clear removes entries" {
     const allocator = testing.allocator;
     const h = try BlockHarness.init(allocator, .{ .max_states = 4 });
     defer h.deinit();
@@ -258,17 +271,17 @@ test "BlockStateCache getSeedState returns stable first-inserted state, clear re
     try cache.add(io, s1, true);
 
     // Seed is the first-inserted resident (s0), NOT the head (s1) — a stable reload base.
-    try testing.expect(cache.getSeedState() == s0.get());
+    try testing.expect(seedState(cache) == s0.get());
 
     // Changing the head must NOT churn the seed: it stays the first-inserted resident.
     try cache.setHeadState(io, s1);
-    try testing.expect(cache.getSeedState() == s0.get());
+    try testing.expect(seedState(cache) == s0.get());
 
-    cache.clear();
-    try testing.expectEqual(@as(usize, 0), cache.size());
+    cache.clear(testing.io);
+    try testing.expectEqual(@as(usize, 0), cache.size(testing.io));
 }
 
-test "BlockStateCache getStates + dumpSummary (debug API)" {
+test "BlockStateCache dumpSummary (debug API)" {
     const allocator = testing.allocator;
     const h = try BlockHarness.init(allocator, .{ .max_states = 4 });
     defer h.deinit();
@@ -284,18 +297,9 @@ test "BlockStateCache getStates + dumpSummary (debug API)" {
     try cache.add(io, s1, true);
 
     // Probe s0 once so its read_count surfaces in the summary.
-    _ = cache.get(io, (try s0.get().state.hashTreeRoot()).*);
+    _ = residentState(cache, (try s0.get().state.hashTreeRoot()).*);
 
-    var it = cache.getStates();
-    var saw_s0 = false;
-    var saw_s1 = false;
-    while (it.next()) |s| {
-        if (s == s0.get()) saw_s0 = true;
-        if (s == s1.get()) saw_s1 = true;
-    }
-    try testing.expect(saw_s0 and saw_s1);
-
-    const summary = try cache.dumpSummary(allocator);
+    const summary = try cache.dumpSummary(testing.io, allocator);
     defer allocator.free(summary);
     try testing.expectEqual(@as(usize, 2), summary.len);
     var saw40 = false;
@@ -358,7 +362,7 @@ test "BlockStateCache head-pin + 2nd-position insert + single-prune order across
     for (scenarios) |sc| {
         // Fresh cache per scenario: clear the shared harness cache rather than re-init.
         const cache = &h.cache;
-        cache.clear();
+        cache.clear(testing.io);
 
         // Setup: add state1 then state2, both non-head (key order [k1, k2]).
         const state1 = try factory.make(100);
@@ -371,11 +375,11 @@ test "BlockStateCache head-pin + 2nd-position insert + single-prune order across
         defer state3.unref();
 
         // Seed is the first-inserted resident (state1) and must stay stable across setHeadState.
-        try testing.expect(cache.getSeedState() == state1.get());
+        try testing.expect(seedState(cache) == state1.get());
 
         try cache.setHeadState(io, if (sc.head_is_state2) state2 else state1);
-        try testing.expect(cache.getSeedState() == state1.get());
-        try testing.expectEqual(@as(usize, 2), cache.size());
+        try testing.expect(seedState(cache) == state1.get());
+        try testing.expectEqual(@as(usize, 2), cache.size(testing.io));
 
         switch (sc.add_as_head) {
             .head => try cache.add(io, state3, true),
@@ -386,18 +390,18 @@ test "BlockStateCache head-pin + 2nd-position insert + single-prune order across
             },
         }
 
-        try testing.expectEqual(@as(usize, 2), cache.size());
+        try testing.expectEqual(@as(usize, 2), cache.size(testing.io));
 
         var order_buf: [2]Root = undefined;
-        const order_len = cache.dumpKeyOrder(&order_buf);
+        const order_len = cache.dumpKeyOrder(testing.io, &order_buf);
         try testing.expectEqual(sc.kept.len, order_len);
         for (sc.kept, order_buf[0..order_len]) |want, got| {
             try testing.expect(std.mem.eql(u8, &want, &got));
         }
 
-        try testing.expect(cache.get(io, sc.pruned) == null);
+        try testing.expect(residentState(cache, sc.pruned) == null);
         for (sc.kept) |kept_key| {
-            try testing.expect(cache.get(io, kept_key) != null);
+            try testing.expect(residentState(cache, kept_key) != null);
         }
     }
 }
@@ -483,15 +487,15 @@ test "BlockStateCache ref survives eviction and clear after the inserting caller
     const replacement = try h.factory.make(3);
     defer replacement.unref();
     try h.cache.add(h.io, replacement, false);
-    try testing.expectEqual(@as(usize, 2), h.cache.size());
-    try testing.expect(h.cache.get(h.io, key) == null);
+    try testing.expectEqual(@as(usize, 2), h.cache.size(testing.io));
+    try testing.expect(residentState(&h.cache, key) == null);
     try testing.expect(h.cache.ref(h.io, key) == null);
     try testing.expectEqual(@as(u64, 2), try retained.get().state.slot());
-    h.cache.clear();
+    h.cache.clear(testing.io);
     try testing.expectEqual(@as(u64, 2), try retained.get().state.slot());
 
     try h.cache.add(h.io, retained, false);
-    try testing.expectEqual(retained.get(), h.cache.get(h.io, key).?);
+    try testing.expectEqual(retained.get(), residentState(&h.cache, key).?);
 }
 
 test "BlockStateCache entries in two caches and a consumer release independently" {
@@ -507,8 +511,8 @@ test "BlockStateCache entries in two caches and a consumer release independently
         const key = (try state.get().state.hashTreeRoot()).*;
         try h.cache.add(h.io, state, false);
         try other.add(h.io, state, false);
-        h.cache.clear();
-        try testing.expectEqual(state.get(), other.get(h.io, key).?);
+        h.cache.clear(testing.io);
+        try testing.expectEqual(state.get(), residentState(&other, key).?);
         break :blk other.ref(h.io, key).?;
     };
     defer retained.unref();
@@ -520,8 +524,8 @@ test "BlockStateCache refSeedState survives clear and keeps insertion order" {
     const allocator = testing.allocator;
     const h = try BlockHarness.init(allocator, .{});
     defer h.deinit();
-    try testing.expect(h.cache.getSeedState() == null);
-    try testing.expect(h.cache.refSeedState() == null);
+    try testing.expect(seedState(&h.cache) == null);
+    try testing.expect(h.cache.refSeedState(testing.io) == null);
 
     const retained = blk: {
         const first = try h.factory.make(1);
@@ -530,12 +534,12 @@ test "BlockStateCache refSeedState survives clear and keeps insertion order" {
         const head = try h.factory.make(2);
         defer head.unref();
         try h.cache.setHeadState(h.io, head);
-        try testing.expectEqual(first.get(), h.cache.getSeedState().?);
-        break :blk h.cache.refSeedState().?;
+        try testing.expectEqual(first.get(), seedState(&h.cache).?);
+        break :blk h.cache.refSeedState(testing.io).?;
     };
     defer retained.unref();
-    h.cache.clear();
-    try testing.expect(h.cache.refSeedState() == null);
+    h.cache.clear(testing.io);
+    try testing.expect(h.cache.refSeedState(testing.io) == null);
     try testing.expectEqual(@as(u64, 1), try retained.get().state.slot());
 }
 
@@ -550,7 +554,7 @@ test "BlockStateCache ref records one read and returns the existing owner" {
     const retained = h.cache.ref(h.io, key).?;
     defer retained.unref();
     try testing.expectEqual(state, retained);
-    const summary = try h.cache.dumpSummary(allocator);
+    const summary = try h.cache.dumpSummary(testing.io, allocator);
     defer allocator.free(summary);
     try testing.expectEqual(@as(u64, 1), summary[0].reads);
 }
@@ -565,14 +569,14 @@ test "BlockStateCache onCheckpoint trims the temporary extra state while keeping
     const next = try h.factory.make(2);
     defer next.unref();
     try h.cache.add(h.io, next, false);
-    try testing.expectEqual(@as(usize, 2), h.cache.size());
+    try testing.expectEqual(@as(usize, 2), h.cache.size(testing.io));
     try h.cache.setHeadState(h.io, null);
-    try testing.expectEqual(@as(usize, 2), h.cache.size());
+    try testing.expectEqual(@as(usize, 2), h.cache.size(testing.io));
 
     const key = (try head.get().state.hashTreeRoot()).*;
-    h.cache.onCheckpoint(key);
-    try testing.expectEqual(@as(usize, 1), h.cache.size());
-    try testing.expectEqual(head.get(), h.cache.get(h.io, key).?);
+    h.cache.onCheckpoint(testing.io, key);
+    try testing.expectEqual(@as(usize, 1), h.cache.size(testing.io));
+    try testing.expectEqual(head.get(), residentState(&h.cache, key).?);
 }
 
 // scanReadStats reads arithmetic: each resident state is read `read_counts[i]` times; never-read
@@ -603,7 +607,7 @@ test "BlockStateCache scanReadStats reads arithmetic over read-count vectors" {
             defer s.unref();
             const key = (try s.get().state.hashTreeRoot()).*;
             try h.cache.add(h.io, s, false);
-            for (0..reads) |_| _ = h.cache.get(h.io, key);
+            for (0..reads) |_| _ = residentState(&h.cache, key);
         }
 
         const stats = h.cache.scanReadStats(h.io);
@@ -629,7 +633,7 @@ test "BlockStateCache scanReadStats seconds computed" {
     try h.cache.add(h.io, s1, false);
 
     // Stamp only s0; s1 stays unread so it must not contribute to the seconds stats.
-    _ = h.cache.get(h.io, k0);
+    _ = residentState(&h.cache, k0);
 
     // Exact seconds are timing-dependent; only the bounds and that the single stamped entry counts
     // (min == max for one sample) are asserted.
@@ -667,21 +671,85 @@ test "BlockStateCache scanReadStats reflects only survivors after evict and clea
     try h.cache.add(h.io, s1, false);
 
     // Read both, twice each, then add a third non-head state to evict the tail (k1).
-    for (0..2) |_| _ = h.cache.get(h.io, k0);
-    for (0..2) |_| _ = h.cache.get(h.io, k1);
+    for (0..2) |_| _ = residentState(&h.cache, k0);
+    for (0..2) |_| _ = residentState(&h.cache, k1);
     const s2 = try h.factory.make(12);
     defer s2.unref();
     try h.cache.add(h.io, s2, false);
 
     // k1 was evicted; only k0's reads (2) remain, so {sum=2, min=2, max=2}.
-    try testing.expect(h.cache.get(h.io, k1) == null);
+    try testing.expect(residentState(&h.cache, k1) == null);
     const after_evict = h.cache.scanReadStats(h.io);
     try testing.expectEqual(@as(f64, 2), after_evict.reads.sum);
     try testing.expectEqual(@as(f64, 2), after_evict.reads.min);
     try testing.expectEqual(@as(f64, 2), after_evict.reads.max);
 
     // After clear there are no survivors: all-zero.
-    h.cache.clear();
+    h.cache.clear(testing.io);
     const after_clear = h.cache.scanReadStats(h.io);
     try testing.expectEqual(metrics.AvgMinMax{}, after_clear.reads);
+}
+
+test "BlockStateCache concurrent callers keep bookkeeping consistent" {
+    const allocator = testing.allocator;
+    const max_states = 4;
+    const h = try BlockHarness.init(allocator, .{ .max_states = max_states });
+    defer h.deinit();
+    const state_count = 6;
+    const thread_count = 4;
+    const iterations = 100;
+    // Node.Pool is single-threaded: states are hashed up front so `add` only reads cached roots,
+    // and the main thread keeps every state alive so evictions never free tree nodes.
+    var states: [state_count]*CachedBeaconStateRc = undefined;
+    var keys: [state_count]Root = undefined;
+    for (&states, &keys, 0..) |*state, *key, i| {
+        state.* = try h.factory.make(100 + i);
+        key.* = (try state.*.get().state.hashTreeRoot()).*;
+    }
+    defer for (states) |state| state.unref();
+
+    const Worker = struct {
+        fn run(cache: *BlockStateCache, all: *const [state_count]*CachedBeaconStateRc, all_keys: *const [state_count]Root, id: usize, failure: *?anyerror) void {
+            work(cache, all, all_keys, id) catch |err| {
+                failure.* = err;
+            };
+        }
+
+        fn work(cache: *BlockStateCache, all: *const [state_count]*CachedBeaconStateRc, all_keys: *const [state_count]Root, id: usize) !void {
+            const io = testing.io;
+            for (0..iterations) |i| {
+                const index = (id + i) % state_count;
+                if (i % 2 == 0) try cache.add(io, all[index], false) else try cache.setHeadState(io, all[index]);
+                if (cache.ref(io, all_keys[(index + 1) % state_count])) |state| state.unref();
+                if (cache.refSeedState(io)) |state| state.unref();
+                if (i % 10 == 0) cache.onCheckpoint(io, all_keys[index]);
+                if (cache.size(io) > max_states) return error.CacheOverfilled;
+                _ = cache.statsSnapshot(io);
+                allocator.free(try cache.dumpSummary(io, allocator));
+            }
+        }
+    };
+
+    var failures: [thread_count]?anyerror = @splat(null);
+    var threads: [thread_count]std.Thread = undefined;
+    for (&threads, 0..) |*thread, id| {
+        thread.* = try std.Thread.spawn(.{}, Worker.run, .{ &h.cache, &states, &keys, id, &failures[id] });
+    }
+    for (threads) |thread| thread.join();
+    for (failures, 0..) |failure, id| {
+        if (failure) |err| {
+            std.debug.print("worker {d} failed: {s}\n", .{ id, @errorName(err) });
+            return err;
+        }
+    }
+
+    try testing.expectEqual(@as(u64, thread_count * iterations), h.cache.statsSnapshot(testing.io).lookups);
+    try testing.expect(h.cache.size(testing.io) <= max_states);
+    h.cache.clear(testing.io);
+    for (states, 0..) |state, i| {
+        testing.expectEqual(@as(u32, 1), state.ref_count.load(.monotonic)) catch |err| {
+            std.debug.print("leaked reference to state {d}\n", .{i});
+            return err;
+        };
+    }
 }

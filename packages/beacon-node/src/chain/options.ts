@@ -50,6 +50,8 @@ export type IChainOptions = BlockProcessOpts &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateTransition?: boolean;
+    /** Experimental native caches and replay. Requires native STF, fork choice and file checkpoint storage. */
+    nativeRegen?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
@@ -134,6 +136,7 @@ export const defaultChainOptions: IChainOptions = {
   nHistoricalStatesFileDataStore: true,
   nativeStateTransition: true,
   nativeForkChoice: false,
+  nativeRegen: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
