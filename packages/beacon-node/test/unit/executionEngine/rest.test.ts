@@ -345,6 +345,7 @@ describe("ExecutionEngine / rest", () => {
           latestValidHash: hashHex,
           validationError: null,
           inclusionListSatisfied: null,
+          inclusionCheckId: null,
         });
 
         const req = lastRequest("/engine/v1/payloads");

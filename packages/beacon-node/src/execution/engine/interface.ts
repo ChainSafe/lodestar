@@ -87,6 +87,8 @@ export type ExecutePayloadResponse =
       validationError: null;
       /** PayloadStatusV2: whether the payload satisfied the inclusion list constraints */
       inclusionListSatisfied?: boolean | null;
+      /** EIP-8369: id to poll the inclusion list verdict while it is pending */
+      inclusionCheckId?: RootHex | null;
     }
   | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
@@ -104,6 +106,7 @@ export type PayloadStatusResult = {
   validationError: string | null;
   /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
   inclusionListSatisfied?: boolean | null;
+  inclusionCheckId?: RootHex | null;
 };
 
 export type ForkchoiceUpdatedResult = {
@@ -179,6 +182,9 @@ export interface IExecutionEngine {
    * execution-apis#609: the execution layer builds against its own view of the head.
    */
   getInclusionList(): Promise<bellatrix.Transactions>;
+
+  /** EIP-8369: inclusion list verdict for an id returned by newPayload, null while pending */
+  getInclusionListVerdict(inclusionCheckId: RootHex): Promise<boolean | null>;
 
   /**
    * Signal fork choice updates

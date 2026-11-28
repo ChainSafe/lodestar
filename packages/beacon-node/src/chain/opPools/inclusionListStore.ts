@@ -124,6 +124,21 @@ export class InclusionListStore {
     return SerializedList.fromArray(transactions);
   }
 
+  /**
+   * Transactions per committee position at `(slot, dependentRoot)`, exactly INCLUSION_LIST_COMMITTEE_SIZE entries
+   * in committee order, empty where no eligible list exists (engine API `inclusionLists`, EIP-8369)
+   */
+  getInclusionListsByPosition(slot: Slot, dependentRoot: RootHex, onlyTimely = true): Uint8Array[][] {
+    const lists: Uint8Array[][] = Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, () => []);
+    for (const {signedInclusionList, committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+      const transactions = Array.from(signedInclusionList.message.transactions);
+      for (const committeeIndex of committeeIndices) {
+        lists[committeeIndex] = transactions;
+      }
+    }
+    return lists;
+  }
+
   /** Bit `i` is set when committee member `i` submitted a valid, non-equivocating inclusion list */
   getInclusionListBits(slot: Slot, dependentRoot: RootHex, onlyTimely = true): BitArray {
     const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);

@@ -1,4 +1,5 @@
 import {SerializedList, Type} from "@chainsafe/ssz";
+import {OmissionClaimRpc, listsFromFlat} from "./omissionClaimSideband.js";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -55,7 +56,14 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
-  engine_newPayloadV6: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
+  engine_newPayloadV6: [
+    ExecutionPayloadRpc,
+    VersionedHashesRpc,
+    DATA,
+    ExecutionRequestsRpc,
+    InclusionListRpc[],
+    OmissionClaimRpc[],
+  ];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -90,6 +98,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV4: [QUANTITY];
   engine_getPayloadV5: [QUANTITY];
   engine_getPayloadV6: [QUANTITY];
+  engine_getPayloadV7: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -104,6 +113,8 @@ export type EngineApiRpcParamTypes = {
   engine_getBlobsV2: [DATA[]];
 
   engine_getInclusionListV1: [];
+
+  engine_getInclusionListVerdictV1: [DATA];
 };
 
 export type PayloadStatus = {
@@ -112,6 +123,8 @@ export type PayloadStatus = {
   validationError: string | null;
   /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
   inclusionListSatisfied?: boolean | null;
+  /** EIP-8369: id to poll engine_getInclusionListVerdictV1 when the verdict is pending */
+  inclusionCheckId?: DATA | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -154,6 +167,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV4: ExecutionPayloadResponse;
   engine_getPayloadV5: ExecutionPayloadResponse;
   engine_getPayloadV6: ExecutionPayloadResponse;
+  engine_getPayloadV7: ExecutionPayloadResponse & {omissionClaims?: OmissionClaimRpc[]};
 
   engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
 
@@ -162,6 +176,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 
   engine_getInclusionListV1: InclusionListRpc;
+
+  engine_getInclusionListVerdictV1: boolean | null;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -273,6 +289,8 @@ export type PayloadAttributesRpc = {
   targetGasLimit?: QUANTITY;
   /** Array of DATA - transactions that the built payload must include (PayloadAttributesV5, HEZE) */
   inclusionListTransactions?: InclusionListRpc;
+  /** EIP-8369: one list per committee position */
+  inclusionLists?: InclusionListRpc[];
 };
 
 /** Array of DATA - array of transaction objects */
@@ -457,8 +475,8 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions
-      ? serializeInclusionList(data.inclusionListTransactions)
+    inclusionLists: data.inclusionListTransactions
+      ? listsFromFlat(data.inclusionListTransactions).map((list) => list.map((tx) => bytesToData(tx)))
       : undefined,
   };
 }

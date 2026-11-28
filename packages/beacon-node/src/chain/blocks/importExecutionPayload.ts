@@ -20,6 +20,11 @@ import {
 import {RootHex, bellatrix} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {
+  emptyInclusionLists,
+  pollInclusionListVerdict,
+  recordInclusionLists,
+} from "../../execution/engine/omissionClaimSideband.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -207,6 +212,7 @@ export async function importExecutionPayload(
   // block is in fork choice, so a dependent root fork choice cannot resolve (below the anchor after checkpoint sync)
   // keys no stored list
   let inclusionListTransactions: bellatrix.Transactions | undefined;
+  let inclusionListsByPosition: Uint8Array[][] | undefined;
   if (isStatePostHeze(blockState)) {
     const inclusionListSlot = protoBlock.slot - 1;
     let dependentRoot: RootHex | null = null;
@@ -231,6 +237,11 @@ export async function importExecutionPayload(
       dependentRoot === null
         ? SerializedList.empty()
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
+    inclusionListsByPosition =
+      dependentRoot === null
+        ? emptyInclusionLists()
+        : this.inclusionListStore.getInclusionListsByPosition(inclusionListSlot, dependentRoot, true);
+    recordInclusionLists(toRootHex(envelope.payload.blockHash), inclusionListsByPosition);
   }
 
   // 4a. Run EL and signature verification in parallel
@@ -337,6 +348,21 @@ export async function importExecutionPayload(
   // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
   // satisfied so a non-compliant engine does not orphan every payload
   if (inclusionListTransactions !== undefined) {
+    if (
+      execResult.status === ExecutionPayloadStatus.VALID &&
+      execResult.inclusionListSatisfied == null &&
+      execResult.inclusionCheckId
+    ) {
+      execResult.inclusionListSatisfied = await pollInclusionListVerdict(
+        this.executionEngine,
+        execResult.inclusionCheckId
+      );
+      this.logger.verbose("Inclusion list verdict", {
+        ...logCtx,
+        inclusionCheckId: execResult.inclusionCheckId,
+        satisfied: String(execResult.inclusionListSatisfied),
+      });
+    }
     if (execResult.status === ExecutionPayloadStatus.VALID && execResult.inclusionListSatisfied == null) {
       this.logger.warn("Execution engine reported no inclusion list verdict, not enforcing inclusion lists", logCtx);
     }
@@ -433,3 +459,4 @@ export async function importExecutionPayload(
     delaySec,
   });
 }
+
