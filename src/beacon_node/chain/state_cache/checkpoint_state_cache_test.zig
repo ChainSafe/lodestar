@@ -130,7 +130,7 @@ test "PersistentCheckpointStateCache replacement, sharing and retained lifetime"
     try h.cache.add(io, cp, replacement);
     try testing.expectEqual(replacement.get(), residentState(&h.cache, cp).?);
     try testing.expectEqual(@as(u32, 3), first.ref_count.load(.monotonic));
-    h.block.clear();
+    h.block.clear(io);
     try h.cache.clear(io);
     try testing.expectEqual(@as(u32, 2), first.ref_count.load(.monotonic));
     try testing.expectEqual(@as(u32, 1), replacement.ref_count.load(.monotonic));
@@ -205,7 +205,7 @@ test "PersistentCheckpointStateCache reload falls back past missing and invalid 
     const restored = (try h.cache.getOrReloadLatest(io, @splat(1), null)).?;
     defer restored.unref();
     try testing.expectEqual(h.base_epoch * spe, try restored.get().state.slot());
-    h.block.clear();
+    h.block.clear(io);
     try testing.expectError(error.NoSeedState, h.cache.getOrReload(io, h.cp(1, 1)));
 }
 

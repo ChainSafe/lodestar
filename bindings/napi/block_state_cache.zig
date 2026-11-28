@@ -84,7 +84,7 @@ pub fn get(self: *BlockStateCache, root: js.Uint8Array) !?BeaconStateView {
 
 pub fn getSeedState(self: *BlockStateCache) !BeaconStateView {
     const native_cache_rc = try self.borrowNativeCache();
-    const state_rc = native_cache_rc.instance.cache.refSeedState() orelse return error.NoSeedState;
+    const state_rc = native_cache_rc.instance.cache.refSeedState(js.io()) orelse return error.NoSeedState;
     return .{
         .state_rc = state_rc,
         .config_rc = native_cache_rc.instance.config_rc.ref(),
@@ -94,23 +94,23 @@ pub fn getSeedState(self: *BlockStateCache) !BeaconStateView {
 
 pub fn clear(self: *BlockStateCache) !void {
     const native_cache_rc = try self.borrowNativeCache();
-    native_cache_rc.instance.cache.clear();
+    native_cache_rc.instance.cache.clear(js.io());
 }
 
 pub fn size(self: *BlockStateCache) !js.Number {
     const native_cache_rc = try self.borrowNativeCache();
-    return js.Number.from(native_cache_rc.instance.cache.size());
+    return js.Number.from(native_cache_rc.instance.cache.size(js.io()));
 }
 
 pub fn onCheckpoint(self: *BlockStateCache, head_root: js.Uint8Array) !void {
     const native_cache_rc = try self.borrowNativeCache();
-    native_cache_rc.instance.cache.onCheckpoint(try head_root.toArray(32));
+    native_cache_rc.instance.cache.onCheckpoint(js.io(), try head_root.toArray(32));
 }
 
 /// In insertion order, so the first root identifies the reload seed.
 pub fn getStateRoots(self: *BlockStateCache) !js.Array {
     const native_cache_rc = try self.borrowNativeCache();
-    const summary = try native_cache_rc.instance.cache.dumpSummary(allocator);
+    const summary = try native_cache_rc.instance.cache.dumpSummary(js.io(), allocator);
     defer allocator.free(summary);
     const result = try js.env().createArrayWithLength(summary.len);
     for (summary, 0..) |item, i| {
@@ -121,7 +121,7 @@ pub fn getStateRoots(self: *BlockStateCache) !js.Array {
 
 pub fn dumpSummary(self: *BlockStateCache) !js.Array {
     const native_cache_rc = try self.borrowNativeCache();
-    const summary = try native_cache_rc.instance.cache.dumpSummary(allocator);
+    const summary = try native_cache_rc.instance.cache.dumpSummary(js.io(), allocator);
     defer allocator.free(summary);
     const env = js.env();
     const wall_offset = std.Io.Clock.real.now(js.io()).toMilliseconds() - std.Io.Clock.awake.now(js.io()).toMilliseconds();
@@ -140,7 +140,7 @@ pub fn dumpSummary(self: *BlockStateCache) !js.Array {
 
 pub fn stats(self: *BlockStateCache) !js.Value {
     const native_cache_rc = try self.borrowNativeCache();
-    const counts = native_cache_rc.instance.cache.stats;
+    const counts = native_cache_rc.instance.cache.statsSnapshot(js.io());
     const env = js.env();
     const result = try env.createObject();
     inline for (std.meta.fields(@TypeOf(counts))) |field| {

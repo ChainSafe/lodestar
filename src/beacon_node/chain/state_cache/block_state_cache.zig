@@ -39,10 +39,14 @@ pub const StateCacheItem = struct {
 ///    head/most-recent, `last` is the oldest and is pruned first. `moveToHead`/`moveToSecond`/
 ///    insert-at-head/insert-at-second are O(1) splices.
 ///  - The INSERTION list (`in_list`, via each entry's `in_node`) records insertion order so
-///    `getSeedState` returns the `first` resident = the oldest-by-insertion, stable across
+///    `refSeedState` returns the `first` resident = the oldest-by-insertion, stable across
 ///    `setHeadState` (head pinning touches only the eviction list).
-/// All operations require serialized access. Published state contents must not be mutated;
-/// clone before changing them and respect the lifetime of any borrowed child views.
+/// Every public method holds `mutex` for the whole call; even lookups reorder lists and bump
+/// read counters. Private `*Locked` methods require the caller to hold it; `std.Io.Mutex` is
+/// not reentrant. Lock order: PersistentCheckpointStateCache.mutex before this one.
+/// The owner must stop all callers before deinit.
+/// Published state contents must not be mutated; clone before changing them and respect the
+/// lifetime of any borrowed child views.
 pub const BlockStateCache = struct {
     const Self = @This();
     /// `slab`-resident, so its address is stable for the cache's lifetime; both lists splice it in
@@ -56,8 +60,11 @@ pub const BlockStateCache = struct {
         in_node: std.DoublyLinkedList.Node = .{},
     };
 
+    pub const Stats = struct { lookups: u64 = 0, hits: u64 = 0, adds: u64 = 0 };
+
+    mutex: std.Io.Mutex = .init,
     allocator: Allocator,
-    stats: struct { lookups: u64 = 0, hits: u64 = 0, adds: u64 = 0 } = .{},
+    stats: Stats = .{},
     max_states: usize,
     /// O(1) lookup. Insertion order is NOT tracked here (the insertion list owns that) and map
     /// iteration order is never used, so eviction may `swapRemove`.
@@ -118,7 +125,7 @@ pub const BlockStateCache = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        self.clear();
+        self.clearLocked();
         self.map.deinit(self.allocator);
         self.allocator.free(self.slab);
         self.allocator.free(self.free);
@@ -139,9 +146,15 @@ pub const BlockStateCache = struct {
         is_head: bool,
     ) !void {
         // `hashTreeRoot` is the sole fallible op and precedes every mutation, so on its failure
-        // `state` is never inserted (no rollback). A future `try` added below would break this.
+        // `state` is never inserted (no rollback). It runs before locking because it may hash the
+        // caller's whole tree and touches no cache data.
         const key = (try state.get().state.hashTreeRoot()).*;
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        self.addLocked(io, key, state, is_head);
+    }
 
+    fn addLocked(self: *Self, io: std.Io, key: Root, state: *CachedBeaconStateRc, is_head: bool) void {
         if (self.map.get(key)) |resident| {
             // The duplicate-resident probe counts as a read; the reorder leaves this pointer valid.
             recordRead(io, resident);
@@ -169,17 +182,14 @@ pub const BlockStateCache = struct {
         }
     }
 
-    /// Borrows a resident state. Do not deinit it. The caller must prevent eviction, clear,
-    /// and cache destruction throughout the borrow; use `ref` for an independent lifetime.
-    pub fn get(self: *Self, io: std.Io, key: Root) ?*CachedBeaconState {
-        const entry = self.lookup(io, key) orelse return null;
-        return entry.state.get();
-    }
-
     /// Acquires one state reference before returning. The caller must unref() it.
     /// The state survives eviction, clear, and cache destruction, subject to its runtime
     /// resource lifetime preconditions. This does not retain the cache itself.
+    /// Locks even though it looks like a read: `lookup` bumps read counters, and a concurrent
+    /// `add` can prune and unref this entry between the map lookup and the ref.
     pub fn ref(self: *Self, io: std.Io, key: Root) ?*CachedBeaconStateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const entry = self.lookup(io, key) orelse return null;
         return entry.state.ref();
     }
@@ -200,37 +210,45 @@ pub const BlockStateCache = struct {
         entry.last_read = time.start(io);
     }
 
-    /// Get a seed state for state reload, this could be any states. The goal is to have the same base
-    /// merkle tree for all BeaconState objects across application. Returns the first-inserted
-    /// resident — stable across `setHeadState`, since head pinning touches only the eviction list, not
-    /// the insertion list. Borrowed; use `refSeedState` to acquire an independent reference.
+    /// Acquires one reference to a seed state for state reload, this could be any states. The goal
+    /// is to have the same base merkle tree for all BeaconState objects across application. Returns
+    /// the first-inserted resident, stable across `setHeadState`, since head pinning touches only the
+    /// eviction list, not the insertion list. The caller must unref() it.
     ///
-    /// Null when the cache is empty — legal via the debug-API `clear()`.
-    pub fn getSeedState(self: *Self) ?*CachedBeaconState {
-        const first = self.in_list.first orelse return null;
-        return @as(*Entry, @alignCast(@fieldParentPtr("in_node", first))).state.get();
-    }
-
-    /// Acquires one reference to the first-inserted resident. The caller must unref() it.
-    pub fn refSeedState(self: *Self) ?*CachedBeaconStateRc {
+    /// Null when the cache is empty, legal via the debug-API `clear()`.
+    pub fn refSeedState(self: *Self, io: std.Io) ?*CachedBeaconStateRc {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const first = self.in_list.first orelse return null;
         return @as(*Entry, @alignCast(@fieldParentPtr("in_node", first))).state.ref();
     }
 
-    pub fn onCheckpoint(self: *Self, head_state_root: Root) void {
+    pub fn onCheckpoint(self: *Self, io: std.Io, head_state_root: Root) void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         self.prune(head_state_root);
     }
 
-    pub fn size(self: *const Self) usize {
+    pub fn size(self: *Self, io: std.Io) usize {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         return self.map.count();
+    }
+
+    pub fn statsSnapshot(self: *Self, io: std.Io) Stats {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        return self.stats;
     }
 
     /// Snapshot reads / seconds-since-last-read over the resident set. Never-read entries are excluded
     /// from `reads`; entries with no `last_read` stamp are excluded from `secs`.
-    pub fn scanReadStats(self: *const Self, io: std.Io) struct {
+    pub fn scanReadStats(self: *Self, io: std.Io) struct {
         reads: metrics.AvgMinMax,
         secs: metrics.AvgMinMax,
     } {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         var reads: metrics.AvgMinMaxAccumulator = .{};
         var node = self.in_list.first;
         while (node) |n| : (node = n.next) {
@@ -253,7 +271,13 @@ pub const BlockStateCache = struct {
     }
 
     /// Removes all entries and releases their references. Other state owners remain valid.
-    pub fn clear(self: *Self) void {
+    pub fn clear(self: *Self, io: std.Io) void {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
+        self.clearLocked();
+    }
+
+    fn clearLocked(self: *Self) void {
         while (self.ev_list.last) |node| {
             const entry: *Entry = @alignCast(@fieldParentPtr("ev_node", node));
             const state = entry.state;
@@ -262,26 +286,11 @@ pub const BlockStateCache = struct {
         }
     }
 
-    pub const StateIterator = struct {
-        node: ?*std.DoublyLinkedList.Node,
-
-        pub fn next(self: *StateIterator) ?*CachedBeaconState {
-            const n = self.node orelse return null;
-            self.node = n.next;
-            const entry: *Entry = @alignCast(@fieldParentPtr("in_node", n));
-            return entry.state.get();
-        }
-    };
-
-    /// ONLY FOR DEBUGGING PURPOSES. For lodestar debug API. Iterates every resident state (BORROWED —
-    /// the cache owns them, do NOT deinit). Valid only until the next cache mutation. Iterates in
-    /// insertion order.
-    pub fn getStates(self: *const Self) StateIterator {
-        return .{ .node = self.in_list.first };
-    }
-
-    /// ONLY FOR DEBUGGING PURPOSES. For lodestar debug API. Per-resident summary; caller frees the slice.
-    pub fn dumpSummary(self: *const Self, allocator: Allocator) ![]StateCacheItem {
+    /// ONLY FOR DEBUGGING PURPOSES. For lodestar debug API. Per-resident summary in insertion
+    /// order; caller frees the slice.
+    pub fn dumpSummary(self: *Self, io: std.Io, allocator: Allocator) ![]StateCacheItem {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         const out = try allocator.alloc(StateCacheItem, self.map.count());
         errdefer allocator.free(out);
 
@@ -291,7 +300,7 @@ pub const BlockStateCache = struct {
             const entry: *Entry = @alignCast(@fieldParentPtr("in_node", n));
             out[i] = .{
                 .slot = try entry.state.get().state.slot(),
-                .root = (try entry.state.get().state.hashTreeRoot()).*,
+                .root = entry.key,
                 .reads = entry.read_count,
                 .last_read = entry.last_read,
                 .checkpoint_state = false,
@@ -376,7 +385,9 @@ pub const BlockStateCache = struct {
 
     /// Walk the eviction list head-to-tail, copying keys into `out`. For tests/parity only.
     /// Returns the number of keys written; asserts `out` is large enough.
-    pub fn dumpKeyOrder(self: *const Self, out: []Root) usize {
+    pub fn dumpKeyOrder(self: *Self, io: std.Io, out: []Root) usize {
+        self.mutex.lockUncancelable(io);
+        defer self.mutex.unlock(io);
         var i: usize = 0;
         var node = self.ev_list.first;
         while (node) |n| : (node = n.next) {

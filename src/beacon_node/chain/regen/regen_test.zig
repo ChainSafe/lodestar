@@ -23,6 +23,12 @@ fn residentCheckpoint(cache: *caches.PersistentCheckpointStateCache, cp: caches.
     return state.get();
 }
 
+fn residentBlock(cache: *caches.BlockStateCache, root: Root) ?*st.CachedBeaconState {
+    const state = cache.ref(io, root) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
 const Provider = struct {
     var context: u8 = 0;
     const vtable: fc.StateProvider.VTable = .{
@@ -243,7 +249,7 @@ test "StateRegenerator cache hits retain the same owner and survive eviction" {
     const state = try h.regen.getState(io, root, false, null);
     defer state.unref();
     try testing.expectEqual(h.anchor.state, state);
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     h.seen.clear();
     try testing.expectEqualSlices(u8, &root, try state.get().state.hashTreeRoot());
     try testing.expect(!failing.has_induced_failure);
@@ -265,15 +271,15 @@ test "StateRegenerator replays a branch and admits states only with disk reload 
     const first = try h.regen.getState(io, root, false, null);
     defer first.unref();
     try testing.expectEqualSlices(u8, &root, try first.get().state.hashTreeRoot());
-    try testing.expect(h.block_cache.get(io, root) == null);
+    try testing.expect(residentBlock(&h.block_cache, root) == null);
     try testing.expectEqual(slot, try (try h.anchor.state.get().state.latestBlockHeader()).get("slot"));
     try testing.expect(h.anchor.state.get().cloned_count_with_transfer_cache > transferred_before);
     const second = try h.regen.getState(io, root, true, null);
     defer second.unref();
-    try testing.expectEqual(second.get(), h.block_cache.get(io, root));
-    try testing.expect(h.block_cache.get(io, try a.stateRoot()) != null);
-    try testing.expect(h.block_cache.get(io, try a.stateRoot()).?.cloned_count_with_transfer_cache > 0);
-    h.block_cache.clear();
+    try testing.expectEqual(second.get(), residentBlock(&h.block_cache, root));
+    try testing.expect(residentBlock(&h.block_cache, try a.stateRoot()) != null);
+    try testing.expect(residentBlock(&h.block_cache, try a.stateRoot()).?.cloned_count_with_transfer_cache > 0);
+    h.block_cache.clear(io);
     try testing.expectEqualSlices(u8, &root, try second.get().state.hashTreeRoot());
 }
 
@@ -289,8 +295,8 @@ test "StateRegenerator reports unknown states parents missing seeds and missing 
     defer block.state.unref();
     h.seen.clear();
     try testing.expectError(error.BlockNotInCache, h.regen.getState(io, try block.stateRoot(), true, null));
-    try testing.expect(h.block_cache.get(io, try block.stateRoot()) == null);
-    h.block_cache.clear();
+    try testing.expect(residentBlock(&h.block_cache, try block.stateRoot()) == null);
+    h.block_cache.clear(io);
     try testing.expectError(error.NoSeedState, h.regen.getState(io, try block.stateRoot(), false, null));
 }
 
@@ -312,7 +318,7 @@ test "StateRegenerator advances checkpoints and preserves same epoch prestate se
     defer checkpoint.unref();
     try testing.expectEqual(boundary, try checkpoint.get().state.slot());
     const checkpoint_root = (try checkpoint.get().state.hashTreeRoot()).*;
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     const hit = try h.regen.getBlockSlotState(io, h.anchor.root, boundary, .{}, false);
     defer hit.unref();
     try testing.expectEqual(checkpoint, hit);
@@ -330,7 +336,7 @@ test "StateRegenerator uses the nearest branch checkpoint before the replay bloc
     defer checkpoint.unref();
     const newer = try h.regen.processSlotsToNearestCheckpoint(io, h.anchor.state, boundary + spe, .{});
     defer newer.unref();
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     const actual = try h.regen.getState(io, try block.stateRoot(), false, null);
     defer actual.unref();
     try testing.expectEqualSlices(u8, try block.state.get().state.hashTreeRoot(), try actual.get().state.hashTreeRoot());
@@ -346,7 +352,7 @@ test "StateRegenerator bounds checkpoint seeds strictly before a boundary block"
     defer block.state.unref();
     const checkpoint = try h.regen.processSlotsToNearestCheckpoint(io, h.anchor.state, boundary, .{});
     defer checkpoint.unref();
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     try testing.expectError(error.NoSeedState, h.regen.getState(io, try block.stateRoot(), false, null));
 }
 
@@ -368,7 +374,7 @@ test "StateRegenerator persists from the second boundary and optionally reloads 
     defer block.state.unref();
 
     // Keep a different root available only as the filesystem loader's seed.
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     const other = try Harness.own(try h.anchor.state.get().clone(allocator, .{ .transfer_cache = false }));
     defer other.unref();
     try (try other.get().state.latestBlockHeader()).set("proposer_index", 1);
@@ -378,7 +384,7 @@ test "StateRegenerator persists from the second boundary and optionally reloads 
     defer restored.unref();
     try testing.expectEqualSlices(u8, try block.state.get().state.hashTreeRoot(), try restored.get().state.hashTreeRoot());
     try testing.expectEqual(1, h.checkpoint_cache.stats.reloads);
-    try testing.expectEqual(restored.get(), h.block_cache.get(io, try block.stateRoot()));
+    try testing.expectEqual(restored.get(), residentBlock(&h.block_cache, try block.stateRoot()));
 }
 
 test "StateRegenerator prestate and block slot lookups reload a persisted-only parent checkpoint" {
@@ -397,7 +403,7 @@ test "StateRegenerator prestate and block slot lookups reload a persisted-only p
     const expected_root = (try expected.get().state.hashTreeRoot()).*;
 
     h.seen.clear();
-    try testing.expect(h.block_cache.get(io, try parent.stateRoot()) == null);
+    try testing.expect(residentBlock(&h.block_cache, try parent.stateRoot()) == null);
     var canceled_vtable = io.vtable.*;
     canceled_vtable.dirOpenFile = struct {
         fn open(_: ?*anyopaque, _: std.Io.Dir, _: []const u8, _: std.Io.Dir.OpenFileOptions) std.Io.File.OpenError!std.Io.File {
@@ -430,7 +436,7 @@ test "StateRegenerator prestate and block slot lookups reload a persisted-only p
         try testing.expectEqual(i + 1, h.checkpoint_cache.stats.reloads);
         try testing.expectEqual(@as(u64, 1), h.checkpoint_cache.stats.persists);
         try testing.expectEqual(boundary, try residentCheckpoint(&h.checkpoint_cache, cp).?.state.slot());
-        try testing.expect(h.block_cache.get(io, try parent.stateRoot()) == null);
+        try testing.expect(residentBlock(&h.block_cache, try parent.stateRoot()) == null);
         try testing.expectEqual(@as(usize, 0), h.seen.size());
     }
 }
@@ -530,7 +536,7 @@ test "StateRegenerator preflights all replay blocks before admitting any state" 
     defer second.state.unref();
     try testing.expect(h.seen.remove(second.root));
     try testing.expectError(error.BlockNotInCache, h.regen.getState(io, try second.stateRoot(), true, null));
-    try testing.expect(h.block_cache.get(io, try first.stateRoot()) == null);
+    try testing.expect(residentBlock(&h.block_cache, try first.stateRoot()) == null);
     try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
 }
 
@@ -557,7 +563,7 @@ test "StateRegenerator releases failed decode and transition results without cha
     var diagnostics: regen.Diagnostics = .{};
     try testing.expectError(error.StateTransitionError, regenerator.getState(io, try block.stateRoot(), true, &diagnostics));
     try testing.expectEqualStrings("BlockParentRootMismatch", diagnostics.transition_error.?);
-    try testing.expect(h.block_cache.get(io, try block.stateRoot()) == null);
+    try testing.expect(residentBlock(&h.block_cache, try block.stateRoot()) == null);
     try testing.expectEqualSlices(u8, &expected, try h.anchor.state.get().state.hashTreeRoot());
     try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
     const cached = try h.regen.getState(io, expected, false, null);
@@ -618,8 +624,8 @@ test "StateRegenerator verifies the fork choice state root before cache admissio
     try testing.expectEqual(try block.slot(), mismatch.slot);
     try testing.expectEqual(bad_root, mismatch.expected);
     try testing.expectEqual(try block.stateRoot(), mismatch.actual);
-    try testing.expect(h.block_cache.get(io, bad_root) == null);
-    try testing.expect(h.block_cache.get(io, try block.stateRoot()) == null);
+    try testing.expect(residentBlock(&h.block_cache, bad_root) == null);
+    try testing.expect(residentBlock(&h.block_cache, try block.stateRoot()) == null);
     try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
     const state = try h.regen.getState(io, try h.anchor.stateRoot(), false, &diagnostics);
     defer state.unref();
@@ -639,7 +645,7 @@ test "StateRegenerator replay bound counts blocks and accepts the exact limit" {
     try testing.expectError(error.BlockNotInCache, h.regen.getState(io, h.fork_choice.blocks.items(.state_root)[index], false, null));
     root = try h.addSummary(root, slot + regen.MAX_REPLAY_BLOCKS + 1, regen.MAX_REPLAY_BLOCKS);
     try testing.expectError(error.TooManyBlocksProcessed, h.regen.getState(io, h.fork_choice.blocks.items(.state_root)[h.fork_choice.blockIndex(root).?], false, null));
-    h.block_cache.clear();
+    h.block_cache.clear(io);
     try testing.expectError(error.NoSeedState, h.regen.getState(io, h.fork_choice.blocks.items(.state_root)[h.fork_choice.blockIndex(root).?], false, null));
 }
 

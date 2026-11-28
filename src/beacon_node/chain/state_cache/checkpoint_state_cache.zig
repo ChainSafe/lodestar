@@ -53,6 +53,7 @@ pub const StateOrLoadedBytes = union(enum) {
 
 /// Every public method holds `mutex` for the whole call, including file I/O.
 /// Private `*Locked` methods require the caller to hold it; `std.Io.Mutex` is not reentrant.
+/// Lock order: this mutex before BlockStateCache.mutex (seed lookup nests them).
 /// The owner must stop all callers before deinit.
 /// Resident snapshots are immutable; clone before mutation.
 /// Config, pool and allocator backing must outlive every StateRc.
@@ -288,12 +289,12 @@ pub const PersistentCheckpointStateCache = struct {
     pub fn refSeedStateToReload(self: *Self, io: std.Io, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
         self.mutex.lockUncancelable(io);
         defer self.mutex.unlock(io);
-        return self.refSeedStateToReloadLocked(cp);
+        return self.refSeedStateToReloadLocked(io, cp);
     }
 
-    fn refSeedStateToReloadLocked(self: *Self, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
+    fn refSeedStateToReloadLocked(self: *Self, io: std.Io, cp: Checkpoint) error{ OutOfMemory, PoolExhausted }!?*StateRc {
         if (try self.findSeed(cp)) |seed| return seed.ref();
-        return self.block_state_cache.refSeedState();
+        return self.block_state_cache.refSeedState(io);
     }
 
     pub fn updatePreComputedCheckpoint(self: *Self, io: std.Io, cp: Checkpoint) ?u64 {
@@ -324,7 +325,7 @@ pub const PersistentCheckpointStateCache = struct {
         const entry = self.cache.getPtr(key.datastoreKey(cp)) orelse return null;
         std.debug.assert(entry.state == null);
         std.debug.assert(entry.persisted_key != null);
-        const seed = (try self.refSeedStateToReloadLocked(cp)) orelse return error.NoSeedState;
+        const seed = (try self.refSeedStateToReloadLocked(io, cp)) orelse return error.NoSeedState;
         defer seed.unref();
         const state_bytes = (try self.store.read(io, self.allocator, entry.persisted_key.?, .limited(self.max_state_bytes))) orelse return null;
         defer self.allocator.free(state_bytes);
