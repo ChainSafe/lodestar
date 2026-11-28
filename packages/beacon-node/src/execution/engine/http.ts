@@ -275,6 +275,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           latestValidHash: latestValidHash ?? "0x0",
           validationError: null,
           inclusionListSatisfied: result.inclusionListSatisfied ?? null,
+          inclusionCheckId: result.inclusionCheckId ?? null,
         };
 
       case ExecutionPayloadStatus.INVALID:
@@ -441,6 +442,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
       return this.jsonRpc.getInclusionList();
     });
+  }
+
+  async getInclusionListVerdict(inclusionCheckId: RootHex): Promise<boolean | null> {
+    return this.enqueue(async () => (await this.jsonRpc.getInclusionListVerdict?.(inclusionCheckId)) ?? null);
   }
 
   private enqueue<T>(job: () => Promise<T>): Promise<T> {

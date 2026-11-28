@@ -113,6 +113,10 @@ export class ForkChoiceExecutionEngine {
     return this.engine.getInclusionList();
   }
 
+  getInclusionListVerdict(inclusionCheckId: RootHex): Promise<boolean | null> {
+    return this.engine.getInclusionListVerdict(inclusionCheckId);
+  }
+
   getPayloadBodiesByHashV2(blockHashes: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
     return this.engine.getPayloadBodiesByHashV2(blockHashes);
   }

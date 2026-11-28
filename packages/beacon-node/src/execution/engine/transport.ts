@@ -55,4 +55,6 @@ export interface IEngineTransport {
   getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
 
   getInclusionList(): Promise<bellatrix.Transactions>;
+
+  getInclusionListVerdict?(inclusionCheckId: RootHex): Promise<boolean | null>;
 }

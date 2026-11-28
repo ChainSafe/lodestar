@@ -12,6 +12,14 @@ import {
   VersionedHashes,
 } from "./interface.js";
 import {IJsonRpcHttpClient, JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
+import {
+  OmissionClaimRpc,
+  devExtraInclusionListTxs,
+  getInclusionLists,
+  getOmissionClaims,
+  listsFromFlat,
+  recordOmissionClaims,
+} from "./omissionClaimSideband.js";
 import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
@@ -27,7 +35,6 @@ import {
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
   serializeExecutionRequests,
-  serializeInclusionList,
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
@@ -101,7 +108,13 @@ export class JsonRpcEngineTransport implements IEngineTransport {
                 serializedVersionedHashes,
                 serializedParentBeaconBlockRoot,
                 serializeExecutionRequests(fork, executionRequests),
-                serializeInclusionList(inclusionListTransactions),
+                (() => {
+                  const lists =
+                    getInclusionLists(serializedExecutionPayload.blockHash) ?? listsFromFlat(inclusionListTransactions);
+                  lists[0] = [...lists[0], ...devExtraInclusionListTxs()];
+                  return lists.map((list) => list.map((tx) => bytesToData(tx)));
+                })(),
+                getOmissionClaims(serializedExecutionPayload.blockHash),
               ],
             },
             notifyNewPayloadOpts
@@ -191,14 +204,26 @@ export class JsonRpcEngineTransport implements IEngineTransport {
         method = "engine_getPayloadV5";
         break;
       default:
-        method = "engine_getPayloadV6";
+        method = ForkSeq[fork] >= ForkSeq.heze ? "engine_getPayloadV7" : "engine_getPayloadV6";
         break;
     }
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [payloadId]}, {...getPayloadOpts, signal});
+    const omissionClaims = (payloadResponse as {omissionClaims?: OmissionClaimRpc[]}).omissionClaims;
+    if (omissionClaims !== undefined && "executionPayload" in payloadResponse) {
+      recordOmissionClaims(payloadResponse.executionPayload.blockHash, omissionClaims);
+    }
     return parseExecutionPayload(fork, payloadResponse);
+  }
+
+  async getInclusionListVerdict(inclusionCheckId: string): Promise<boolean | null> {
+    const method = "engine_getInclusionListVerdictV1";
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params: [inclusionCheckId]},
+      getInclusionListOpts
+    );
   }
 
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {

@@ -152,10 +152,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
+      engine_getPayloadV7: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
       engine_getInclusionListV1: this.getInclusionList.bind(this),
+      engine_getInclusionListVerdictV1: this.getInclusionListVerdict.bind(this),
     };
   }
 
@@ -508,6 +510,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 
   private getInclusionList(): EngineApiRpcReturnTypes["engine_getInclusionListV1"] {
     return [];
+  }
+
+  private getInclusionListVerdict(): EngineApiRpcReturnTypes["engine_getInclusionListVerdictV1"] {
+    return true;
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {

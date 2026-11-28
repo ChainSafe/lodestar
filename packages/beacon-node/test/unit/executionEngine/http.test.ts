@@ -193,6 +193,16 @@ describe("ExecutionEngine / http", () => {
     });
   });
 
+  it("getInclusionListVerdict polls engine_getInclusionListVerdictV1", async () => {
+    const checkId = "0x" + "ab".repeat(32);
+    returnValue = {jsonrpc: "2.0", id: 68, result: false};
+
+    const verdict = await executionEngine.getInclusionListVerdict(checkId);
+
+    expect(reqJsonRpcPayload).toMatchObject({method: "engine_getInclusionListVerdictV1", params: [checkId]});
+    expect(verdict).toBe(false);
+  });
+
   it("notifyForkchoiceUpdate returns the heze inclusion list verdict", async () => {
     const hash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
     returnValue = {
