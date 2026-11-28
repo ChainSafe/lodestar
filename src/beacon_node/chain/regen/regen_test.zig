@@ -16,6 +16,13 @@ const Root = ct.primitive.Root.Type;
 const spe = st.preset.SLOTS_PER_EPOCH;
 const validator_count = 64;
 
+/// Single-threaded lookup; the cache keeps its own reference after this returns.
+fn residentCheckpoint(cache: *caches.PersistentCheckpointStateCache, cp: caches.Checkpoint) ?*st.CachedBeaconState {
+    const state = cache.ref(io, cp) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
 const Provider = struct {
     var context: u8 = 0;
     const vtable: fc.StateProvider.VTable = .{
@@ -356,7 +363,7 @@ test "StateRegenerator persists from the second boundary and optionally reloads 
     defer second.unref();
     try testing.expect(h.checkpoint_cache.stats.persists > 0);
     const cp: caches.Checkpoint = .{ .epoch = boundary / spe, .root = h.anchor.root };
-    try testing.expect(h.checkpoint_cache.get(io, cp) == null);
+    try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp) == null);
     const block = try h.addBlock(h.anchor, boundary + 1, 1);
     defer block.state.unref();
 
@@ -402,14 +409,14 @@ test "StateRegenerator prestate and block slot lookups reload a persisted-only p
     for ([_]bool{ true, false }, 0..) |prestate, i| {
         errdefer std.debug.print("persisted checkpoint lookup prestate={any}\n", .{prestate});
         try testing.expectEqual(@as(usize, if (i == 0) 1 else 0), try h.checkpoint_cache.processState(io, parent.root, checkpoint));
-        try testing.expect(h.checkpoint_cache.get(io, cp) == null);
+        try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp) == null);
         try testing.expectError(error.BlockNotInCache, h.regen.getBlockSlotState(io, parent.root, boundary + 1, .{}, false));
         if (prestate) {
             try testing.expectError(error.Canceled, h.regen.getPreState(canceled_io, parent.root, boundary + 1, .{}));
         } else {
             try testing.expectError(error.Canceled, h.regen.getBlockSlotState(canceled_io, parent.root, boundary + 1, .{}, true));
         }
-        try testing.expect(h.checkpoint_cache.get(io, cp) == null);
+        try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp) == null);
         try testing.expectEqual(i, h.checkpoint_cache.stats.reloads);
         try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
 
@@ -422,7 +429,7 @@ test "StateRegenerator prestate and block slot lookups reload a persisted-only p
         try testing.expectEqualSlices(u8, &expected_root, try restored.get().state.hashTreeRoot());
         try testing.expectEqual(i + 1, h.checkpoint_cache.stats.reloads);
         try testing.expectEqual(@as(u64, 1), h.checkpoint_cache.stats.persists);
-        try testing.expectEqual(boundary, try h.checkpoint_cache.get(io, cp).?.state.slot());
+        try testing.expectEqual(boundary, try residentCheckpoint(&h.checkpoint_cache, cp).?.state.slot());
         try testing.expect(h.block_cache.get(io, try parent.stateRoot()) == null);
         try testing.expectEqual(@as(usize, 0), h.seen.size());
     }
@@ -465,16 +472,16 @@ test "StateRegenerator matches TS checkpoint persistence with two roots and two 
         if (multiple_epochs) {
             try testing.expectEqualSlices(u8, &caches.datastoreKey(cp0b), &keys[0]);
             try testing.expectEqual(@as(u64, 1), h.checkpoint_cache.stats.pruned_from_memory);
-            try testing.expect(h.checkpoint_cache.get(io, cp0a) == null);
-            try testing.expect(h.checkpoint_cache.get(io, cp0b) == null);
+            try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp0a) == null);
+            try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp0b) == null);
             var removed = try h.checkpoint_cache.getStateOrBytes(io, allocator, cp0a);
             defer if (removed) |*state_or_bytes| state_or_bytes.deinit(allocator);
             try testing.expect(removed == null);
         } else {
-            try testing.expect(h.checkpoint_cache.get(io, cp0a) != null);
-            try testing.expect(h.checkpoint_cache.get(io, cp0b) != null);
+            try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp0a) != null);
+            try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp0b) != null);
         }
-        try testing.expect(h.checkpoint_cache.get(io, cp1) != null);
+        try testing.expect(residentCheckpoint(&h.checkpoint_cache, cp1) != null);
     }
 }
 
@@ -491,7 +498,7 @@ test "StateRegenerator slot failures report diagnostics and preserve the source"
     try testing.expectEqualStrings("InvalidForkCast", diagnostics.transition_error.?);
     try testing.expectEqualSlices(u8, &before_root, try h.anchor.state.get().state.hashTreeRoot());
     try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
-    try testing.expect(h.checkpoint_cache.getLatest(io, h.anchor.root, null) == null);
+    try testing.expect(h.checkpoint_cache.refLatest(io, h.anchor.root, null) == null);
 }
 
 test "StateRegenerator rejects missing finalized roots and non-descending ancestry" {
@@ -677,7 +684,7 @@ test "StateRegenerator transfers cached epoch states and the final partial epoch
     try testing.expectEqual(count + 1, h.anchor.state.get().cloned_count_with_transfer_cache);
     for (epoch..epoch + 2) |e| {
         errdefer std.debug.print("checkpoint epoch {d}\n", .{e});
-        const state = h.checkpoint_cache.get(io, .{ .epoch = e, .root = h.anchor.root }).?;
+        const state = residentCheckpoint(&h.checkpoint_cache, .{ .epoch = e, .root = h.anchor.root }).?;
         try testing.expect(state.cloned_count_with_transfer_cache > 0);
         try testing.expectEqual(e * spe, try state.state.slot());
     }
@@ -753,7 +760,7 @@ test "StateRegenerator slot advancement crosses the Electra Fulu fork" {
     defer result.unref();
     try testing.expectEqual(.fulu, result.get().state.forkSeq());
     try testing.expectEqual(.electra, h.anchor.state.get().state.forkSeq());
-    const checkpoint = h.checkpoint_cache.get(io, .{ .epoch = epoch, .root = h.anchor.root }).?;
+    const checkpoint = residentCheckpoint(&h.checkpoint_cache, .{ .epoch = epoch, .root = h.anchor.root }).?;
     try testing.expectEqual(.fulu, checkpoint.state.forkSeq());
     try testing.expectEqual(epoch * spe, try checkpoint.state.slot());
 }

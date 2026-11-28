@@ -12,6 +12,25 @@ const io = testing.io;
 const allocator = testing.allocator;
 const spe = st.preset.SLOTS_PER_EPOCH;
 
+/// Single-threaded lookup; the cache keeps its own reference after this returns.
+fn residentState(cache: *Cache, cp: Checkpoint) ?*st.CachedBeaconState {
+    const state = cache.ref(io, cp) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
+fn latestState(cache: *Cache, root: Root, max_epoch: ?u64) ?*st.CachedBeaconState {
+    const state = cache.refLatest(io, root, max_epoch) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
+fn seedState(cache: *Cache, cp: Checkpoint) !?*st.CachedBeaconState {
+    const state = (try cache.refSeedStateToReload(io, cp)) orelse return null;
+    defer state.unref();
+    return state.get();
+}
+
 const Harness = struct {
     tmp: testing.TmpDir,
     path: []u8,
@@ -109,7 +128,7 @@ test "PersistentCheckpointStateCache replacement, sharing and retained lifetime"
     const replacement = try h.make(0);
     defer replacement.unref();
     try h.cache.add(io, cp, replacement);
-    try testing.expectEqual(replacement.get(), h.cache.get(io, cp).?);
+    try testing.expectEqual(replacement.get(), residentState(&h.cache, cp).?);
     try testing.expectEqual(@as(u32, 3), first.ref_count.load(.monotonic));
     h.block.clear();
     try h.cache.clear(io);
@@ -124,25 +143,22 @@ test "PersistentCheckpointStateCache latest lookup, debug output and precomputed
     try h.add(0, 1);
     try h.add(1, 1);
     try h.add(2, 2);
-    try testing.expectEqual((h.base_epoch + 1) * spe, try h.cache.getLatest(io, @splat(1), null).?.state.slot());
-    try testing.expectEqual(h.base_epoch * spe, try h.cache.getLatest(io, @splat(1), h.base_epoch).?.state.slot());
-    try testing.expect(h.cache.getLatest(io, @splat(1), h.base_epoch - 1) == null);
+    try testing.expectEqual((h.base_epoch + 1) * spe, try latestState(&h.cache, @splat(1), null).?.state.slot());
+    try testing.expectEqual(h.base_epoch * spe, try latestState(&h.cache, @splat(1), h.base_epoch).?.state.slot());
+    try testing.expect(latestState(&h.cache, @splat(1), h.base_epoch - 1) == null);
     const retained = h.cache.refLatest(io, @splat(1), null).?;
     defer retained.unref();
-    try testing.expect(h.cache.updatePreComputedCheckpoint(h.cp(1, 1)) == null);
-    _ = h.cache.get(io, h.cp(1, 1));
-    try testing.expectEqual(@as(?u64, 1), h.cache.updatePreComputedCheckpoint(h.cp(2, 2)));
-    const summary = try h.cache.dumpSummary(allocator);
+    try testing.expect(h.cache.updatePreComputedCheckpoint(io, h.cp(1, 1)) == null);
+    _ = residentState(&h.cache, h.cp(1, 1));
+    try testing.expectEqual(@as(?u64, 1), h.cache.updatePreComputedCheckpoint(io, h.cp(2, 2)));
+    const summary = try h.cache.dumpSummary(io, allocator);
     defer allocator.free(summary);
-    const keys = try h.cache.dumpCheckpointKeys(allocator);
+    const keys = try h.cache.dumpCheckpointKeys(io, allocator);
     defer allocator.free(keys);
     try testing.expectEqual(@as(usize, 3), keys.len);
     try testing.expectEqualSlices(u8, &keys[0].root, &summary[0].root);
     try testing.expect(summary[0].checkpoint_state);
-    var states = h.cache.getStates();
-    var count: usize = 0;
-    while (states.next() != null) count += 1;
-    try testing.expectEqual(@as(usize, 3), count);
+    try testing.expectEqual(@as(usize, 3), h.cache.statsSnapshot(io).in_memory);
 }
 
 test "PersistentCheckpointStateCache persist, bytes, reload and re-add preserve the disk key" {
@@ -150,10 +166,10 @@ test "PersistentCheckpointStateCache persist, bytes, reload and re-add preserve 
     defer h.deinit();
     try h.add(0, 1);
     try h.add(1, 2);
-    const original = try h.cache.get(io, h.cp(0, 1)).?.state.serialize(allocator);
+    const original = try residentState(&h.cache, h.cp(0, 1)).?.state.serialize(allocator);
     defer allocator.free(original);
     try h.persist(h.cp(0, 1));
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     const data = (try h.cache.getStateOrLoadDb(io, allocator, h.cp(0, 1))).?;
     defer data.deinit(allocator);
     try testing.expectEqualSlices(u8, original, data.loaded.bytes);
@@ -222,13 +238,13 @@ test "PersistentCheckpointStateCache failed writes retain residents and can retr
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, cp.root, state));
     try testing.expectEqual(@as(u64, 1), h.cache.stats.failed_epochs);
     try testing.expectEqual(@as(u64, 0), h.cache.stats.persists);
-    try testing.expectEqual(state.get(), h.cache.get(io, cp).?);
+    try testing.expectEqual(state.get(), residentState(&h.cache, cp).?);
     try testing.expectEqual(@as(u32, 2), state.ref_count.load(.monotonic));
     try testing.expect((try h.cache.store.read(io, allocator, dk, .unlimited)) == null);
     try h.cache.store.dir.?.deleteDir(io, tmp_name);
     try testing.expectEqual(@as(usize, 1), try h.cache.processState(io, cp.root, state));
     try testing.expectEqual(@as(u64, 1), h.cache.stats.persists);
-    try testing.expect(h.cache.get(io, cp) == null);
+    try testing.expect(residentState(&h.cache, cp) == null);
     try testing.expectEqual(@as(u32, 1), state.ref_count.load(.monotonic));
 }
 
@@ -255,7 +271,7 @@ test "PersistentCheckpointStateCache persistence allocation failures preserve re
             const count: ?usize = cache.processState(io, cp.root, state) catch |err| blk: {
                 try testing.expectEqual(error.OutOfMemory, err);
                 failing.fail_index = std.math.maxInt(usize);
-                try testing.expectEqual(state.get(), cache.get(io, cp).?);
+                try testing.expectEqual(state.get(), residentState(&cache, cp).?);
                 try testing.expectEqual(@as(u32, 2), state.ref_count.load(.monotonic));
                 const bytes = try cache.store.read(io, allocator, dk, .unlimited);
                 defer if (bytes) |data| allocator.free(data);
@@ -268,7 +284,7 @@ test "PersistentCheckpointStateCache persistence allocation failures preserve re
                 try testing.expectEqual(@as(usize, 1), written);
                 reached_success = true;
             }
-            try testing.expect(cache.get(io, cp) == null);
+            try testing.expect(residentState(&cache, cp) == null);
             try testing.expectEqual(@as(u32, 1), state.ref_count.load(.monotonic));
             try cache.clear(io);
             try testing.expect((try cache.store.read(io, allocator, dk, .unlimited)) == null);
@@ -291,7 +307,7 @@ test "PersistentCheckpointStateCache re-add reuses the persisted file and clear 
     try h.cache.add(io, h.cp(0, 1), replacement);
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(1), replacement));
     try testing.expectEqual(@as(u64, 1), h.cache.stats.persists);
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     try testing.expectEqual(@as(u32, 1), replacement.ref_count.load(.monotonic));
     try h.cache.clear(io);
     try testing.expect((try h.cache.store.read(io, allocator, key.datastoreKey(h.cp(0, 1)), .unlimited)) == null);
@@ -323,7 +339,7 @@ test "PersistentCheckpointStateCache failed reloads release seed references" {
     try testing.expectError(error.OutOfMemory, h.cache.getOrReload(io, h.cp(0, 1)));
     h.cache.allocator = allocator;
     try testing.expectEqual(@as(u32, 2), seed.ref_count.load(.monotonic));
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     const restored = (try h.cache.getOrReload(io, h.cp(0, 1))).?;
     defer restored.unref();
     try testing.expectEqual(@as(u32, 2), seed.ref_count.load(.monotonic));
@@ -347,7 +363,7 @@ test "PersistentCheckpointStateCache processState chooses boundary and unknown b
     defer persisted.deinit(allocator);
     const unknown = (try h.cache.getStateOrBytes(io, allocator, h.cp(0, 3))).?;
     defer unknown.deinit(allocator);
-    try testing.expect(h.cache.get(io, h.cp(1, 4)) != null);
+    try testing.expect(residentState(&h.cache, h.cp(1, 4)) != null);
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(4), head));
 }
 
@@ -360,7 +376,7 @@ test "PersistentCheckpointStateCache memory zero uses supplied root at the curre
     defer head.unref();
     try Harness.setRoot(head, h.base_epoch * spe - 1, 1);
     try testing.expectEqual(@as(usize, 1), try h.cache.processState(io, @splat(2), head));
-    try testing.expect(h.cache.get(io, h.cp(0, 2)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 2)) == null);
     try testing.expect((try h.cache.getStateOrBytes(io, allocator, h.cp(0, 1))) == null);
 }
 
@@ -384,10 +400,10 @@ test "PersistentCheckpointStateCache flat retention queues disk deletes and re-a
     try h.persist(h.cp(0, 1));
     try h.add(1, 1);
     try h.add(2, 1);
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     try h.cache.drainPendingDeletes(io);
     try testing.expect((try h.cache.store.read(io, allocator, key.datastoreKey(h.cp(0, 1)), .unlimited)) == null);
-    const keys = try h.cache.dumpCheckpointKeys(allocator);
+    const keys = try h.cache.dumpCheckpointKeys(io, allocator);
     defer allocator.free(keys);
     try testing.expectEqual(@as(usize, 2), keys.len);
 }
@@ -395,19 +411,19 @@ test "PersistentCheckpointStateCache flat retention queues disk deletes and re-a
 test "PersistentCheckpointStateCache tier retention keeps finalized and justified anchors" {
     const h = try Harness.init(.{ .memory = 0 });
     defer h.deinit();
-    h.cache.onCheckpoint(h.base_epoch, h.base_epoch + 1);
+    h.cache.onCheckpoint(io, h.base_epoch, h.base_epoch + 1);
     for (0..60) |offset| {
         try h.add(@intCast(offset), 1);
         try h.persist(h.cp(@intCast(offset), 1));
     }
-    const keys = try h.cache.dumpCheckpointKeys(allocator);
+    const keys = try h.cache.dumpCheckpointKeys(io, allocator);
     defer allocator.free(keys);
     try testing.expect(keys.len < 40);
     const finalized = (try h.cache.getStateOrBytes(io, allocator, h.cp(0, 1))).?;
     defer finalized.deinit(allocator);
     const justified = (try h.cache.getStateOrBytes(io, allocator, h.cp(1, 1))).?;
     defer justified.deinit(allocator);
-    h.cache.onCheckpoint(h.base_epoch, h.base_epoch + 60);
+    h.cache.onCheckpoint(io, h.base_epoch, h.base_epoch + 60);
     try h.add(60, 1);
     try h.persist(h.cp(60, 1));
     try testing.expect((try h.cache.getStateOrBytes(io, allocator, h.cp(1, 1))) == null);
@@ -460,7 +476,7 @@ test "PersistentCheckpointStateCache deletion failures remain retryable" {
     try h.cache.store.remove(io, dk);
     try h.cache.store.dir.?.createDir(io, name, .default_dir);
     try testing.expectError(error.IsDir, h.cache.clear(io));
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     try h.cache.store.dir.?.deleteDir(io, name);
     try h.cache.drainPendingDeletes(io);
     try testing.expectEqual(@as(u64, 0), h.cache.stats.removed_files);
@@ -478,13 +494,13 @@ test "PersistentCheckpointStateCache seed preference and block fallback" {
     try h.cache.add(io, h.cp(1, 1), first);
     try h.cache.add(io, h.cp(1, 3), matching);
     try h.add(2, 4);
-    try testing.expectEqual(matching.get(), (try h.cache.findSeedStateToReload(cp)).?);
-    try testing.expectEqual(first.get(), (try h.cache.findSeedStateToReload(h.cp(0, 99))).?);
-    const owned = (try h.cache.refSeedStateToReload(cp)).?;
+    try testing.expectEqual(matching.get(), (try seedState(&h.cache, cp)).?);
+    try testing.expectEqual(first.get(), (try seedState(&h.cache, h.cp(0, 99))).?);
+    const owned = (try h.cache.refSeedStateToReload(io, cp)).?;
     defer owned.unref();
     try h.cache.clear(io);
     try h.block.add(io, first, false);
-    try testing.expectEqual(first.get(), (try h.cache.findSeedStateToReload(cp)).?);
+    try testing.expectEqual(first.get(), (try seedState(&h.cache, cp)).?);
 }
 
 test "PersistentCheckpointStateCache skipped boundary and reorg retain both branches" {
@@ -502,7 +518,7 @@ test "PersistentCheckpointStateCache skipped boundary and reorg retain both bran
     defer reloaded.unref();
     try h.cache.add(io, h.cp(0, 2), reloaded);
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(1), head));
-    try testing.expect(h.cache.get(io, h.cp(0, 2)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 2)) == null);
     const disk = (try h.cache.getStateOrBytes(io, allocator, h.cp(0, 2))).?;
     defer disk.deinit(allocator);
 }
@@ -510,7 +526,7 @@ test "PersistentCheckpointStateCache skipped boundary and reorg retain both bran
 test "PersistentCheckpointStateCache tier promotion and deletion keep all epoch roots together" {
     const h = try Harness.init(.{ .memory = 0 });
     defer h.deinit();
-    h.cache.onCheckpoint(h.base_epoch, h.base_epoch);
+    h.cache.onCheckpoint(io, h.base_epoch, h.base_epoch);
     for (0..34) |offset| {
         try h.add(@intCast(offset), 1);
         try h.persist(h.cp(@intCast(offset), 1));
@@ -565,12 +581,12 @@ test "PersistentCheckpointStateCache rejects oversized writes and reloads withou
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(1), head));
     try testing.expectEqual(@as(u64, 1), h.cache.stats.failed_epochs);
     try testing.expectEqual(@as(u64, 0), h.cache.stats.persists);
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) != null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) != null);
     h.cache.max_state_bytes = normal_limit;
     try h.persist(h.cp(0, 1));
     h.cache.max_state_bytes = 16;
     try testing.expectError(error.StreamTooLong, h.cache.getOrReload(io, h.cp(0, 1)));
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     h.cache.max_state_bytes = normal_limit;
     const restored = (try h.cache.getOrReload(io, h.cp(0, 1))).?;
     restored.unref();
@@ -593,7 +609,7 @@ test "PersistentCheckpointStateCache filesystem filename matches the JS SSZ chec
 test "PersistentCheckpointStateCache promotes aligned epochs through multiple tiers" {
     const h = try Harness.init(.{ .memory = 0 });
     defer h.deinit();
-    h.cache.onCheckpoint(h.base_epoch, h.base_epoch + 512);
+    h.cache.onCheckpoint(io, h.base_epoch, h.base_epoch + 512);
     for (0..50) |i| {
         const offset: u64 = @intCast(i * 16);
         try h.add(offset, 1);
@@ -681,11 +697,11 @@ test "PersistentCheckpointStateCache re-add before draining preserves the persis
     defer h.deinit();
     try h.add(0, 1);
     try h.persist(h.cp(0, 1));
-    h.cache.queueFinalizedPrune(h.base_epoch + 1);
+    h.cache.queueFinalizedPrune(io, h.base_epoch + 1);
     try h.add(0, 1);
     try h.cache.drainPendingDeletes(io);
     try testing.expectEqual(@as(u64, 0), h.cache.stats.removed_files);
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) != null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) != null);
     const head = try h.make(0);
     defer head.unref();
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(1), head));
@@ -721,11 +737,11 @@ test "PersistentCheckpointStateCache host maintenance uses the same branch selec
     defer head.unref();
     try Harness.setRoot(head, h.base_epoch * spe - 1, 1);
     try Harness.setRoot(head, h.base_epoch * spe, 2);
-    h.cache.queueFinalizedPrune(h.base_epoch);
-    const epochs = try h.cache.getEpochsToPersist(allocator, h.base_epoch + 1);
+    h.cache.queueFinalizedPrune(io, h.base_epoch);
+    const epochs = try h.cache.getEpochsToPersist(io, allocator, h.base_epoch + 1);
     defer allocator.free(epochs);
     try testing.expectEqualSlices(u64, &.{h.base_epoch}, epochs);
-    const writes = try h.cache.preparePastEpoch(allocator, @splat(3), head.get(), epochs[0]);
+    const writes = try h.cache.preparePastEpoch(io, allocator, @splat(3), head.get(), epochs[0]);
     defer allocator.free(writes);
     try testing.expectEqual(@as(usize, 1), writes.len);
     try testing.expectEqual(h.cp(0, 2), writes[0]);
@@ -794,7 +810,7 @@ test "PersistentCheckpointStateCache review: failed finalized delete does not st
     try testing.expectEqual(@as(usize, 1), try h.cache.processState(io, @splat(5), head));
     try testing.expectEqual(@as(u64, 4), h.cache.stats.failed_deletes);
     try testing.expectEqual(@as(u64, 1), h.cache.stats.removed_files);
-    try testing.expect(h.cache.get(io, h.cp(1, 4)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(1, 4)) == null);
     try testing.expect((try h.cache.store.read(io, allocator, key.datastoreKey(h.cp(0, 3)), .unlimited)) == null);
     const data = (try h.cache.getStateOrBytes(io, allocator, h.cp(1, 4))).?;
     defer data.deinit(allocator);
@@ -804,7 +820,7 @@ test "PersistentCheckpointStateCache review: failed finalized delete does not st
 test "PersistentCheckpointStateCache review: trailing delete failure preserves the persisted count" {
     const h = try Harness.init(.{ .memory = 0 });
     defer h.deinit();
-    h.cache.onCheckpoint(h.base_epoch, h.base_epoch);
+    h.cache.onCheckpoint(io, h.base_epoch, h.base_epoch);
     for (1..17) |offset| {
         try h.add(@intCast(offset), 1);
         try h.persist(h.cp(@intCast(offset), 1));
@@ -818,7 +834,7 @@ test "PersistentCheckpointStateCache review: trailing delete failure preserves t
     const head = try h.make(17);
     defer head.unref();
     try testing.expectEqual(@as(usize, 1), try h.cache.processState(io, @splat(1), head));
-    try testing.expect(h.cache.get(io, h.cp(17, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(17, 1)) == null);
     try testing.expectEqual(@as(u64, 1), h.cache.stats.failed_deletes);
     try testing.expectError(error.IsDir, h.cache.drainPendingDeletes(io));
 }
@@ -899,7 +915,7 @@ test "PersistentCheckpointStateCache review: unselected persisted residents coun
     try Harness.setRoot(head, h.base_epoch * spe, 2);
     try testing.expectEqual(@as(usize, 0), try h.cache.processState(io, @splat(3), head));
     try testing.expectEqual(@as(u64, 1), h.cache.stats.pruned_from_memory);
-    try testing.expect(h.cache.get(io, h.cp(0, 1)) == null);
+    try testing.expect(residentState(&h.cache, h.cp(0, 1)) == null);
     const data = (try h.cache.getStateOrBytes(io, allocator, h.cp(0, 1))).?;
     data.deinit(allocator);
 }
@@ -922,13 +938,13 @@ test "PersistentCheckpointStateCache review: epoch plan allocates only the resul
     for ([_]u64{ 3, 0, 2, 1 }) |offset| try h.add(offset, 1);
     for ([_]u64{ h.base_epoch + 1, std.math.maxInt(u64) }) |max_epoch| {
         var failing = testing.FailingAllocator.init(allocator, .{ .fail_index = 1 });
-        const epochs = try h.cache.getEpochsToPersist(failing.allocator(), max_epoch);
+        const epochs = try h.cache.getEpochsToPersist(io, failing.allocator(), max_epoch);
         defer failing.allocator().free(epochs);
         const expected = [_]u64{ h.base_epoch, h.base_epoch + 1, h.base_epoch + 2 };
         try testing.expectEqualSlices(u64, expected[0..if (max_epoch == h.base_epoch + 1) @as(usize, 2) else 3], epochs);
     }
     var failing = testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
-    const empty = try h.cache.getEpochsToPersist(failing.allocator(), h.base_epoch - 1);
+    const empty = try h.cache.getEpochsToPersist(io, failing.allocator(), h.base_epoch - 1);
     defer failing.allocator().free(empty);
     try testing.expectEqual(@as(usize, 0), empty.len);
 }
@@ -963,7 +979,7 @@ test "PersistentCheckpointStateCache canceled deletion stops the drain and leave
         try h.add(0, root);
         try h.persist(h.cp(0, root));
     }
-    h.cache.queueFinalizedPrune(h.base_epoch + 1);
+    h.cache.queueFinalizedPrune(io, h.base_epoch + 1);
     var attempts: usize = 0;
     var vtable = std.Io.failing.vtable.*;
     vtable.dirDeleteFile = struct {
@@ -991,4 +1007,64 @@ test "PersistentCheckpointStateCache canceled deletion stops the drain and leave
     try testing.expectEqual(@as(usize, 0), remaining.len);
     try h.cache.drainPendingDeletes(io);
     try testing.expectEqual(@as(u64, 2), h.cache.stats.removed_files);
+}
+
+test "PersistentCheckpointStateCache concurrent callers keep bookkeeping consistent" {
+    const h = try Harness.init(.{ .memory = 2 });
+    defer h.deinit();
+    const epoch_count = 6;
+    const thread_count = 4;
+    const iterations = 50;
+    // Node.Pool is single-threaded: the main thread keeps every state alive so worker
+    // unrefs never free tree nodes outside the cache lock.
+    var states: [epoch_count]*st.CachedBeaconStateRc = undefined;
+    for (&states, 0..) |*state, offset| state.* = try h.make(offset);
+    defer for (states) |state| state.unref();
+
+    const Worker = struct {
+        fn run(harness: *Harness, all: *const [epoch_count]*st.CachedBeaconStateRc, id: usize, failure: *?anyerror) void {
+            work(harness, all, id) catch |err| {
+                failure.* = err;
+            };
+        }
+
+        fn work(harness: *Harness, all: *const [epoch_count]*st.CachedBeaconStateRc, id: usize) !void {
+            for (0..iterations) |i| {
+                const offset = (id + i) % epoch_count;
+                const cp = harness.cp(offset, @intCast(offset + 1));
+                try harness.cache.add(io, cp, all[offset]);
+                if (harness.cache.ref(io, cp)) |state| state.unref();
+                if (harness.cache.refLatest(io, cp.root, null)) |state| state.unref();
+                harness.cache.onCheckpoint(io, harness.base_epoch - 1, harness.base_epoch);
+                _ = harness.cache.updatePreComputedCheckpoint(io, cp);
+                _ = harness.cache.statsSnapshot(io);
+                allocator.free(try harness.cache.snapshotCheckpoints(io, allocator));
+                if (id == 0) _ = try harness.cache.processState(io, cp.root, all[epoch_count - 1]);
+            }
+        }
+    };
+
+    var failures: [thread_count]?anyerror = @splat(null);
+    var threads: [thread_count]std.Thread = undefined;
+    for (&threads, 0..) |*thread, id| {
+        thread.* = try std.Thread.spawn(.{}, Worker.run, .{ h, &states, id, &failures[id] });
+    }
+    for (threads) |thread| thread.join();
+    for (failures, 0..) |failure, id| {
+        if (failure) |err| {
+            std.debug.print("worker {d} failed: {s}\n", .{ id, @errorName(err) });
+            return err;
+        }
+    }
+
+    const snapshot = h.cache.statsSnapshot(io);
+    try testing.expectEqual(@as(u64, thread_count * iterations), snapshot.counters.adds);
+    try testing.expectEqual(@as(usize, epoch_count), snapshot.in_memory + snapshot.persisted);
+    try h.cache.clear(io);
+    for (states, 0..) |state, offset| {
+        testing.expectEqual(@as(u32, 1), state.ref_count.load(.monotonic)) catch |err| {
+            std.debug.print("leaked reference to state at offset {d}\n", .{offset});
+            return err;
+        };
+    }
 }

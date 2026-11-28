@@ -109,12 +109,12 @@ pub fn getBytes(self: *CheckpointStateCache, epoch: js.Number, root: js.Uint8Arr
 
 pub fn onCheckpoint(self: *CheckpointStateCache, finalized_epoch: js.Number, justified_epoch: js.Number) !void {
     const native_cache_rc = try self.borrowNativeCache();
-    native_cache_rc.instance.cache.onCheckpoint(try finalized_epoch.toSafeInteger(), try justified_epoch.toSafeInteger());
+    native_cache_rc.instance.cache.onCheckpoint(native_cache_rc.instance.io.io(), try finalized_epoch.toSafeInteger(), try justified_epoch.toSafeInteger());
 }
 
 pub fn updatePreComputedCheckpoint(self: *CheckpointStateCache, epoch: js.Number, root: js.Uint8Array) !?js.Number {
     const native_cache_rc = try self.borrowNativeCache();
-    const count = native_cache_rc.instance.cache.updatePreComputedCheckpoint(try checkpoint(epoch, root)) orelse return null;
+    const count = native_cache_rc.instance.cache.updatePreComputedCheckpoint(native_cache_rc.instance.io.io(), try checkpoint(epoch, root)) orelse return null;
     return js.Number.from(count);
 }
 
@@ -139,13 +139,8 @@ pub fn drainPendingDeletes(self: *CheckpointStateCache) !void {
 /// Snapshot residency before constructing JS objects, whose setters may reenter the binding.
 pub fn getCheckpoints(self: *CheckpointStateCache) !js.Array {
     const native_cache_rc = try self.borrowNativeCache();
-    const cache = &native_cache_rc.instance.cache;
-    const Item = struct { cp: caches.Checkpoint, in_memory: bool };
-    const snapshot = try allocator.alloc(Item, cache.cache.count());
+    const snapshot = try native_cache_rc.instance.cache.snapshotCheckpoints(native_cache_rc.instance.io.io(), allocator);
     defer allocator.free(snapshot);
-    for (cache.cache.keys(), cache.cache.values(), snapshot) |key, entry, *item| {
-        item.* = .{ .cp = caches.key.checkpointFromDatastoreKey(key), .in_memory = entry.state != null };
-    }
     const env = js.env();
     const result = try env.createArrayWithLength(snapshot.len);
     for (snapshot, 0..) |item, i| {
@@ -160,7 +155,7 @@ pub fn getCheckpoints(self: *CheckpointStateCache) !js.Array {
 
 pub fn dumpSummary(self: *CheckpointStateCache) !js.Array {
     const native_cache_rc = try self.borrowNativeCache();
-    const summary = try native_cache_rc.instance.cache.dumpSummary(allocator);
+    const summary = try native_cache_rc.instance.cache.dumpSummary(native_cache_rc.instance.io.io(), allocator);
     defer allocator.free(summary);
     const env = js.env();
     const wall_offset = std.Io.Clock.real.now(native_cache_rc.instance.io.io()).toMilliseconds() - std.Io.Clock.awake.now(native_cache_rc.instance.io.io()).toMilliseconds();
@@ -179,12 +174,8 @@ pub fn dumpSummary(self: *CheckpointStateCache) !js.Array {
 
 pub fn stats(self: *CheckpointStateCache) !js.Value {
     const native_cache_rc = try self.borrowNativeCache();
-    const cp = native_cache_rc.instance.cache.stats;
-    var in_memory: usize = 0;
-    var persisted: usize = 0;
-    for (native_cache_rc.instance.cache.cache.values()) |entry| {
-        if (entry.state != null) in_memory += 1 else persisted += 1;
-    }
+    const snapshot = native_cache_rc.instance.cache.statsSnapshot(native_cache_rc.instance.io.io());
+    const cp = snapshot.counters;
     const env = js.env();
     const result = try env.createObject();
     const counts = .{
@@ -194,8 +185,8 @@ pub fn stats(self: *CheckpointStateCache) !js.Value {
         .persists = cp.persists,
         .reloads = cp.reloads,
         .pruned = cp.pruned_from_memory,
-        .inMemory = in_memory,
-        .persisted = persisted,
+        .inMemory = snapshot.in_memory,
+        .persisted = snapshot.persisted,
     };
     inline for (std.meta.fields(@TypeOf(counts))) |field| {
         try result.setNamedProperty(field.name, try env.createDouble(@floatFromInt(@field(counts, field.name))));
